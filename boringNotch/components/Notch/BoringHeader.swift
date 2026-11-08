@@ -16,7 +16,7 @@ struct BoringHeader: View {
     var body: some View {
         HStack(spacing: 0) {
             HStack {
-                if (!tvm.isEmpty || coordinator.alwaysShowTabs) && Defaults[.boringShelf] {
+                if ((!tvm.isEmpty || coordinator.alwaysShowTabs) && Defaults[.boringShelf]) || Defaults[.enableClipboardHistory] || Defaults[.enablePhotoBooth] {
                     TabSelectionView()
                 } else if vm.notchState == .open {
                     EmptyView()
@@ -43,39 +43,16 @@ struct BoringHeader: View {
                             .transition(.scale(scale: 0.8).combined(with: .opacity))
                     } else {
                         if Defaults[.showMirror] {
-                            Button(action: {
+                            GlassCircleButton(icon: vm.isCameraExpanded ? "web.camera.fill" : "web.camera", help: "Mirror") {
                                 vm.toggleCameraPreview()
-                            }) {
-                                Capsule()
-                                    .fill(.black)
-                                    .frame(width: 30, height: 30)
-                                    .overlay {
-                                        Image(systemName: "web.camera")
-                                            .foregroundColor(.white)
-                                            .padding()
-                                            .imageScale(.medium)
-                                    }
                             }
-                            .buttonStyle(PlainButtonStyle())
                         }
                         if Defaults[.settingsIconInNotch] {
-                            Button(action: {
+                            GlassCircleButton(icon: "gearshape.fill", help: "Settings") {
                                 DispatchQueue.main.async {
                                     SettingsWindowController.shared.showWindow()
                                 }
-                                
-                            }) {
-                                Capsule()
-                                    .fill(.black)
-                                    .frame(width: 30, height: 30)
-                                    .overlay {
-                                        Image(systemName: "gear")
-                                            .foregroundColor(.white)
-                                            .padding()
-                                            .imageScale(.medium)
-                                    }
                             }
-                            .buttonStyle(PlainButtonStyle())
                         }
                         if Defaults[.showBatteryIndicator] {
                             BoringBatteryView(

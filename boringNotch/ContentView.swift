@@ -23,6 +23,7 @@ struct ContentView: View {
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
     @ObservedObject var brightnessManager = BrightnessManager.shared
     @ObservedObject var volumeManager = VolumeManager.shared
+    @ObservedObject var downloadMonitor = DownloadMonitor.shared
     @State private var hoverTask: Task<Void, Never>?
     @State private var isHovering: Bool = false
     @State private var anyDropDebounceTask: Task<Void, Never>?
@@ -36,6 +37,8 @@ struct ContentView: View {
     @Default(.useMusicVisualizer) var useMusicVisualizer
 
     @Default(.showNotHumanFace) var showNotHumanFace
+
+    @Default(.tisaGlassStyle) var tisaGlassStyle
 
     // Shared interactive spring for movement/resizing to avoid conflicting animations
     private let animationSpring = Animation.interactiveSpring(response: 0.38, dampingFraction: 0.8, blendDuration: 0)
@@ -58,6 +61,15 @@ struct ContentView: View {
         )
     }
 
+    /// An in-progress (or just-finished) browser download takes the closed notch over the music activity.
+    private var showDownloadActivity: Bool {
+        Defaults[.enableDownloadListener]
+            && vm.notchState == .closed
+            && !vm.hideOnClosed
+            && !coordinator.expandingView.show
+            && (downloadMonitor.isActive || downloadMonitor.recentlyCompleted != nil)
+    }
+
     private var computedChinWidth: CGFloat {
         var chinWidth: CGFloat = vm.closedNotchSize.width
 
@@ -65,6 +77,8 @@ struct ContentView: View {
             && vm.notchState == .closed && Defaults[.showPowerStatusNotifications]
         {
             chinWidth = 640
+        } else if showDownloadActivity {
+            chinWidth += (2 * max(0, vm.effectiveClosedNotchHeight - 12) + 20)
         } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music)
             && vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle)
             && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed
@@ -100,8 +114,16 @@ struct ContentView: View {
                         : cornerRadiusInsets.closed.bottom
                     )
                     .padding([.horizontal, .bottom], vm.notchState == .open ? 12 : 0)
-                    .background(.black)
+                    .background {
+                        NotchBackdrop(isOpen: vm.notchState == .open)
+                    }
                     .clipShape(currentNotchShape)
+                    .overlay {
+                        if vm.notchState == .open && tisaGlassStyle {
+                            NotchRimLight(shape: currentNotchShape)
+                                .transition(.opacity)
+                        }
+                    }
                     .overlay(alignment: .top) {
                         Rectangle()
                             .fill(.black)
@@ -287,6 +309,9 @@ struct ContentView: View {
                       } else if coordinator.sneakPeek.show && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && vm.notchState == .closed {
                           InlineHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
                               .transition(.opacity)
+                      } else if showDownloadActivity {
+                          DownloadLiveActivity()
+                              .transition(.opacity)
                       } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music) && vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle) && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed {
                           MusicLiveActivity()
                               .frame(alignment: .center)
@@ -349,6 +374,10 @@ struct ContentView: View {
                         NotchHomeView(albumArtNamespace: albumArtNamespace)
                     case .shelf:
                         ShelfView()
+                    case .clipboard:
+                        ClipboardHistoryView()
+                    case .photoBooth:
+                        PhotoBoothView()
                     }
                 }
                 .transition(

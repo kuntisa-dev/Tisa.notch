@@ -29,16 +29,21 @@ struct DynamicNotchApp: App {
     }
 
     var body: some Scene {
-        MenuBarExtra("boring.notch", systemImage: "sparkle", isInserted: $showMenuBarIcon) {
+        MenuBarExtra("Tisa Notch", systemImage: "sparkle", isInserted: $showMenuBarIcon) {
             Button("Settings") {
                 DispatchQueue.main.async {
                     SettingsWindowController.shared.showWindow()
                 }
             }
             .keyboardShortcut(KeyEquivalent(","), modifiers: .command)
+            Button("Khmer Photo Booth") {
+                DispatchQueue.main.async {
+                    KhmerStampPanelController.shared.show()
+                }
+            }
             CheckForUpdatesView(updater: updaterController.updater)
             Divider()
-            Button("Restart Boring Notch") {
+            Button("Restart Tisa Notch") {
                 ApplicationRelauncher.restart()
             }
             Button("Quit", role: .destructive) {
@@ -365,6 +370,40 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        KeyboardShortcuts.onKeyDown(for: .toggleMicrophone) { [weak self] in
+            Task { @MainActor in
+                guard let self = self else { return }
+                if let muted = MicrophoneManager.shared.toggle() {
+                    self.coordinator.toggleSneakPeek(
+                        status: true,
+                        type: .mic,
+                        duration: 1.5,
+                        value: muted ? 0 : 1
+                    )
+                } else {
+                    NSSound.beep()
+                }
+            }
+        }
+
+        KeyboardShortcuts.onKeyDown(for: .clipboardHistoryPanel) { [weak self] in
+            Task { @MainActor in
+                self?.toggleNotchTab(.clipboard, enabled: Defaults[.enableClipboardHistory])
+            }
+        }
+
+        KeyboardShortcuts.onKeyDown(for: .openPhotoBooth) { [weak self] in
+            Task { @MainActor in
+                self?.toggleNotchTab(.photoBooth, enabled: Defaults[.enablePhotoBooth], closeAfter: .seconds(30))
+            }
+        }
+
+        KeyboardShortcuts.onKeyDown(for: .openKhmerStampBooth) {
+            Task { @MainActor in
+                KhmerStampPanelController.shared.toggle()
+            }
+        }
+
         KeyboardShortcuts.onKeyDown(for: .toggleNotchOpen) { [weak self] in
             Task { [weak self] in
                 guard let self = self else { return }
@@ -422,6 +461,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         setupDragDetectors()
 
+        // New features: start background watchers (each respects its own setting).
+        ClipboardHistoryManager.shared.start()
+        DownloadMonitor.shared.start()
+
         if coordinator.firstLaunch {
             DispatchQueue.main.async {
                 self.showOnboardingWindow()
@@ -436,6 +479,51 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         previousScreens = NSScreen.screens
+    }
+
+    /// Opens the notch on `tab` on the screen under the mouse, or closes it if that tab is already showing.
+    @MainActor
+    func toggleNotchTab(_ tab: NotchViews, enabled: Bool, closeAfter: Duration = .seconds(6)) {
+        guard enabled else {
+            NSSound.beep()
+            return
+        }
+
+        var viewModel = vm
+        if Defaults[.showOnAllDisplays] {
+            let mouseLocation = NSEvent.mouseLocation
+            if let screen = NSScreen.screens.first(where: { $0.frame.contains(mouseLocation) }),
+               let uuid = screen.displayUUID, let screenViewModel = viewModels[uuid] {
+                viewModel = screenViewModel
+            }
+        }
+
+        closeNotchTask?.cancel()
+        closeNotchTask = nil
+
+        if viewModel.notchState == .open && coordinator.currentView == tab {
+            viewModel.close()
+            return
+        }
+
+        coordinator.currentView = tab
+        withAnimation(.interactiveSpring(response: 0.38, dampingFraction: 0.8, blendDuration: 0)) {
+            viewModel.open()
+        }
+
+
+        // Opened from the keyboard, the pointer may never enter the notch, so close it
+        // after a while unless the pointer is over it. (A photo countdown also holds it open.)
+        closeNotchTask = Task { @MainActor [weak viewModel] in
+            try? await Task.sleep(for: closeAfter)
+            while !Task.isCancelled, let vm = viewModel, vm.notchState == .open, vm.isMouseHovering() {
+                try? await Task.sleep(for: .seconds(1))
+            }
+            guard !Task.isCancelled, let vm = viewModel, vm.notchState == .open else { return }
+            if BoringViewCoordinator.shared.currentView == tab {
+                vm.close()
+            }
+        }
     }
 
     func playWelcomeSound() {

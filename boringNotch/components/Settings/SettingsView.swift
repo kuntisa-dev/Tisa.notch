@@ -45,11 +45,17 @@ struct SettingsView: View {
                 NavigationLink(value: "Battery") {
                     Label("Battery", systemImage: "battery.100.bolt")
                 }
-//                NavigationLink(value: "Downloads") {
-//                    Label("Downloads", systemImage: "square.and.arrow.down")
-//                }
+                NavigationLink(value: "Downloads") {
+                    Label("Downloads", systemImage: "square.and.arrow.down")
+                }
                 NavigationLink(value: "Shelf") {
                     Label("Shelf", systemImage: "books.vertical")
+                }
+                NavigationLink(value: "Clipboard") {
+                    Label("Clipboard", systemImage: "doc.on.clipboard")
+                }
+                NavigationLink(value: "PhotoBooth") {
+                    Label("Photo Booth", systemImage: "camera")
                 }
                 NavigationLink(value: "Shortcuts") {
                     Label("Shortcuts", systemImage: "keyboard")
@@ -83,8 +89,14 @@ struct SettingsView: View {
                     HUD()
                 case "Battery":
                     Charge()
+                case "Downloads":
+                    DownloadsSettings()
                 case "Shelf":
                     Shelf()
+                case "Clipboard":
+                    ClipboardSettings()
+                case "PhotoBooth":
+                    PhotoBoothSettings()
                 case "Shortcuts":
                     Shortcuts()
                 case "Extensions":
@@ -1174,6 +1186,8 @@ struct Appearance: View {
     @State private var speed: CGFloat = 1.0
     var body: some View {
         Form {
+            TisaGlassSection()
+
             Section {
                 Toggle("Always show tabs", isOn: $coordinator.alwaysShowTabs)
                 Defaults.Toggle(key: .settingsIconInNotch) {
@@ -1201,6 +1215,8 @@ struct Appearance: View {
             } header: {
                 Text("Media")
             }
+
+            RealAudioVisualizerSection()
 
             Section {
                 Toggle(
@@ -1739,6 +1755,18 @@ struct Shortcuts: View {
             }
             Section {
                 KeyboardShortcuts.Recorder("Toggle Notch Open:", name: .toggleNotchOpen)
+                KeyboardShortcuts.Recorder("Open Clipboard History:", name: .clipboardHistoryPanel)
+                KeyboardShortcuts.Recorder("Open Photo Booth:", name: .openPhotoBooth)
+            }
+            Section {
+                KeyboardShortcuts.Recorder("Mute / Unmute Microphone:", name: .toggleMicrophone)
+            } header: {
+                Text("Microphone")
+            } footer: {
+                Text("Mutes the default input device and shows the result in the notch.")
+                    .multilineTextAlignment(.trailing)
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
             }
         }
         .accentColor(.effectiveAccent)
