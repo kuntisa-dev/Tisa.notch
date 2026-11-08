@@ -28,6 +28,7 @@ struct AlbumArtView: View {
     @ObservedObject var musicManager = MusicManager.shared
     @ObservedObject var vm: BoringViewModel
     let albumArtNamespace: Namespace.ID
+    @Default(.tisaGlassStyle) private var glassStyle
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -81,18 +82,39 @@ struct AlbumArtView: View {
     }
                 
 
+    private var artCornerRadius: CGFloat {
+        Defaults[.cornerRadiusScaling]
+            ? MusicPlayerImageSizes.cornerRadiusInset.opened
+            : MusicPlayerImageSizes.cornerRadiusInset.closed
+    }
+
     private var albumArtImage: some View {
         Image(nsImage: musicManager.albumArt)
             .resizable()
             .aspectRatio(1, contentMode: .fit)
             .matchedGeometryEffect(id: "albumArt", in: albumArtNamespace)
             .clipped()
-            .clipShape(
-                RoundedRectangle(
-                    cornerRadius: Defaults[.cornerRadiusScaling]
-                        ? MusicPlayerImageSizes.cornerRadiusInset.opened
-                        : MusicPlayerImageSizes.cornerRadiusInset.closed)
+            .clipShape(RoundedRectangle(cornerRadius: artCornerRadius, style: .continuous))
+            .overlay {
+                if glassStyle {
+                    // Glass edge on the artwork.
+                    RoundedRectangle(cornerRadius: artCornerRadius, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.45), Color.white.opacity(0.05), Color.white.opacity(0.15)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.8
+                        )
+                }
+            }
+            .shadow(
+                color: glassStyle && musicManager.isPlaying
+                    ? Color(nsColor: musicManager.avgColor).opacity(0.65) : .clear,
+                radius: 14, y: 5
             )
+            .animation(.smooth(duration: 0.5), value: musicManager.isPlaying)
     }
 
     @ViewBuilder
@@ -416,6 +438,24 @@ struct VolumeControlView: View {
     }
 }
 
+// MARK: - Glass card
+
+/// Frosted card behind a home-view panel (the calendar).
+struct GlassCardModifier: ViewModifier {
+    let enabled: Bool
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .tisaGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        } else {
+            content
+        }
+    }
+}
+
 // MARK: - Main View
 
 struct NotchHomeView: View {
@@ -446,6 +486,7 @@ struct NotchHomeView: View {
             if Defaults[.showCalendar] {
                 CalendarView()
                     .frame(width: shouldShowCamera ? 170 : 215)
+                    .modifier(GlassCardModifier(enabled: Defaults[.tisaGlassStyle]))
                     .onHover { isHovering in
                         vm.isHoveringCalendar = isHovering
                     }
@@ -500,6 +541,7 @@ struct MusicSliderView: View {
                 Text(timeString(from: duration))
             }
             .fontWeight(.medium)
+            .monospacedDigit()
             .foregroundColor(
                 Defaults[.playerColorTinting]
                     ? Color(nsColor: color).ensureMinimumBrightness(factor: 0.6) : .gray
@@ -535,25 +577,24 @@ struct CustomSlider: View {
     var onValueChange: ((Double) -> Void)?
     var onDragChange: ((Double) -> Void)?
 
+    @Default(.tisaGlassStyle) private var glassStyle
+    @State private var hovering = false
+
     var body: some View {
         GeometryReader { geometry in
             let width = geometry.size.width
-            let height = CGFloat(dragging ? 9 : 5)
             let rangeSpan = range.upperBound - range.lowerBound
 
             let progress = rangeSpan == .zero ? 0 : (value - range.lowerBound) / rangeSpan
             let filledTrackWidth = min(max(progress, 0), 1) * width
 
-            ZStack(alignment: .leading) {
-                Rectangle()
-                    .fill(.gray.opacity(0.3))
-                    .frame(height: height)
-
-                Rectangle()
-                    .fill(color)
-                    .frame(width: filledTrackWidth, height: height)
+            Group {
+                if glassStyle {
+                    glassTrack(width: width, filled: filledTrackWidth)
+                } else {
+                    classicTrack(filled: filledTrackWidth)
+                }
             }
-            .cornerRadius(height / 2)
             .frame(height: 10)
             .contentShape(Rectangle())
             .gesture(
@@ -572,7 +613,58 @@ struct CustomSlider: View {
                         lastDragged = Date()
                     }
             )
+            .onHover { isHovering in
+                withAnimation(.smooth(duration: 0.2)) { hovering = isHovering }
+            }
             .animation(.spring(response: 0.35, dampingFraction: 0.7), value: dragging)
+        }
+    }
+
+    private func classicTrack(filled: CGFloat) -> some View {
+        let height = CGFloat(dragging ? 9 : 5)
+        return ZStack(alignment: .leading) {
+            Rectangle()
+                .fill(.gray.opacity(0.3))
+                .frame(height: height)
+
+            Rectangle()
+                .fill(color)
+                .frame(width: filled, height: height)
+        }
+        .cornerRadius(height / 2)
+    }
+
+    /// Glass track: a recessed groove, a glowing fill, and a knob that appears on hover or drag.
+    private func glassTrack(width: CGFloat, filled: CGFloat) -> some View {
+        let active = dragging || hovering
+        let height: CGFloat = dragging ? 8 : (hovering ? 6 : 5)
+        let knob: CGFloat = dragging ? 13 : 11
+
+        return ZStack(alignment: .leading) {
+            Capsule()
+                .fill(Color.white.opacity(0.14))
+                .overlay(Capsule().stroke(Color.black.opacity(0.25), lineWidth: 0.5))
+                .frame(height: height)
+
+            Capsule()
+                .fill(
+                    LinearGradient(
+                        colors: [color.opacity(0.75), color],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(width: max(filled, height), height: height)
+                .shadow(color: color.opacity(0.6), radius: active ? 6 : 3)
+
+            Circle()
+                .fill(Color.white)
+                .overlay(Circle().stroke(Color.black.opacity(0.15), lineWidth: 0.5))
+                .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
+                .frame(width: knob, height: knob)
+                .offset(x: min(max(filled - knob / 2, 0), max(width - knob, 0)))
+                .opacity(active ? 1 : 0)
+                .scaleEffect(active ? 1 : 0.4)
         }
     }
 }

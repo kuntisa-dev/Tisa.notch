@@ -1,0 +1,2742 @@
+diff --git a/CUSTOM_FEATURES.md b/CUSTOM_FEATURES.md
+new file mode 100644
+index 0000000..244a917
+--- /dev/null
++++ b/CUSTOM_FEATURES.md
+@@ -0,0 +1,53 @@
++# Boring Notch: custom features
++
++Based on Boring Notch 2.7.3 (build 271). Five features added; all new code is in `boringNotch/features/`.
++
++## Build and run
++
++1. Xcode 26 or later (the README asks for macOS 15.6+ to build; the app itself runs on macOS 14+).
++2. Open `boringNotch.xcodeproj` and wait for Swift packages to resolve.
++3. Signing & Capabilities: set your Apple ID as Team for the **boringNotch** and **BoringNotchXPCHelper** targets.
++4. Quit the official Boring Notch and turn off its "Launch at login" (otherwise two notches run on top of each other), then press ⌘R.
++
++This build was written without compiling on a Mac. If Xcode reports errors, copy them back to Claude.
++
++## What's new
++
++| Feature | How to use | Setting |
++| --- | --- | --- |
++| Microphone mute | ⌃⌥M mutes or unmutes the default input; the notch shows "Mic muted / unmuted" | Settings › Shortcuts |
++| Clipboard history | ⌃⌥V opens the notch on a new Clipboard tab. Click a card to copy it again, then ⌘V | Settings › Clipboard |
++| Download progress | Safari, Chrome-based browsers and Firefox downloads show in the closed notch (exact progress for Safari, a spinner for the others). Hover for name and size | Settings › Downloads |
++| Photo Booth | New camera tab in the open notch (or ⌃⌥P). 19 live effects plus Normal. Color: Mono, Noir, Sepia, Chrome, Vintage, Fade, Glow, Pop Art, Comic, Thermal, X-Ray. Patterns: Pixelate, Halftone. Distortions: Mirror, Kaleidoscope, Light Tunnel, Bulge, Pinch, Twirl. Scroll the effect row sideways to see them all, 3/5/10 s countdown, flash and shutter sound. Click the preview or the shutter. Photos save to Pictures › Boring Notch Photos; recent ones show beside the controls (click to open, right-click for Finder/Shelf, drag out) | Settings › Photo Booth |
++| Audio-reactive visualizer | Visualizer bars follow the music instead of random motion | Settings › Appearance › Music visualizer (off by default) |
++
++## Permissions
++
++- **Downloads folder**: new sandbox entitlement `com.apple.security.files.downloads.read-only`.
++- **Microphone**: new entitlement `com.apple.security.device.audio-input` and `NSMicrophoneUsageDescription`, in case macOS asks before changing the mute state.
++- **Pictures folder**: new entitlement `com.apple.security.assets.pictures.read-write`, so Photo Booth can save to ~/Pictures. The camera permission already existed for the mirror.
++- **Screen & System Audio Recording**: only for the audio visualizer. macOS shows its recording indicator while it listens. Restart the app after granting it.
++
++## Other changes
++
++- Bundle ID is `com.kuntisa.boringnotch` (helper: `com.kuntisa.boringnotch.BoringNotchXPCHelper`), so this build installs next to the official app instead of replacing it. It starts with fresh settings and asks for permissions again. The helper's XPC service name now follows the app's bundle ID automatically.
++- Automatic update checks are off (`SUEnableAutomaticChecks = false`), so Sparkle won't replace this build with the official one. Don't use "Check for Updates" unless you want the official version back.
++- The unused clipboard and microphone shortcut defaults (⇧⌘C, fn-F5) changed to ⌃⌥V and ⌃⌥M, because ⇧⌘C clashes with Chrome and Finder and fn-F5 can't be registered as a global hotkey.
++- The microphone HUD shows even when "Replace system HUD" is off.
++- Photo Booth runs the camera only while its tab is visible. Opened with ⌃⌥P it closes itself after 30 s unless the pointer is over the notch; a countdown keeps it open. It also stops the Home tab's mirror while in use.
++- Tab icons now show their name on hover.
++
++## Not yet tested on a Mac
++
++- Muting uses the input device's mute switch, or input volume 0 if it has none. Some USB or Bluetooth mics may expose neither; you'll hear a beep then.
++- Safari's download progress reads `DownloadEntryProgressBytesSoFar` / `DownloadEntryProgressTotalToLoad` from the `.download` bundle's Info.plist. If a Safari version stops writing those, progress falls back to a spinner.
++- Photo Booth's shutter sound looks for macOS's `Shutter.aif` / `Grab.aif` system sounds and falls back to "Tink" if neither exists.
++- The audio visualizer uses ScreenCaptureKit from the sandboxed app. If capture fails, the bars fall back to random motion and Xcode's console shows `SystemAudioAnalyzer: could not start capture`.
++
++## Files
++
++New: `features/MicrophoneManager.swift`, `ClipboardHistoryManager.swift`, `ClipboardHistoryView.swift`, `DownloadMonitor.swift`, `DownloadLiveActivity.swift`, `SystemAudioAnalyzer.swift`, `FeatureSettings.swift`, `PhotoBoothCamera.swift`, `PhotoBoothView.swift`.
++
++Changed: `boringNotchApp.swift`, `ContentView.swift`, `BoringViewCoordinator.swift`, `components/Music/MusicVisualizer.swift`, `components/Settings/SettingsView.swift`, `components/Tabs/TabSelectionView.swift`, `components/Tabs/TabButton.swift`, `components/Notch/BoringHeader.swift`, `enums/generic.swift`, `models/Constants.swift`, `Shortcuts/ShortcutConstants.swift`, `Info.plist`, `boringNotch.entitlements`, `boringNotch.xcodeproj/project.pbxproj` (adds the synced `features` folder).
++
++`features.patch` holds the same changes as a diff against the original source.
+diff --git a/boringNotch.xcodeproj/project.pbxproj b/boringNotch.xcodeproj/project.pbxproj
+index cb1f4b9..cfbdc74 100644
+--- a/boringNotch.xcodeproj/project.pbxproj
++++ b/boringNotch.xcodeproj/project.pbxproj
+@@ -323,6 +323,7 @@
+ 
+ /* Begin PBXFileSystemSynchronizedRootGroup section */
+ 		112FB72F2CCF12CC0015238C /* private */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = private; sourceTree = "<group>"; };
++		C0FFEE00FEA7000000000001 /* features */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = features; sourceTree = "<group>"; };
+ 		11F748502EC9AABA00F841DB /* BoringNotchXPCHelper */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (11F7485C2EC9AABA00F841DB /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = BoringNotchXPCHelper; sourceTree = "<group>"; };
+ /* End PBXFileSystemSynchronizedRootGroup section */
+ 
+@@ -583,6 +584,7 @@
+ 				14CEF41E2C5CAED400855D72 /* boringNotch.entitlements */,
+ 				14CEF41B2C5CAED400855D72 /* Preview Content */,
+ 				112FB72F2CCF12CC0015238C /* private */,
++				C0FFEE00FEA7000000000001 /* features */,
+ 				11CC44A12CEE614100C7244B /* BoringViewCoordinator.swift */,
+ 			);
+ 			path = boringNotch;
+@@ -799,6 +801,7 @@
+ 			);
+ 			fileSystemSynchronizedGroups = (
+ 				112FB72F2CCF12CC0015238C /* private */,
++				C0FFEE00FEA7000000000001 /* features */,
+ 			);
+ 			name = boringNotch;
+ 			packageProductDependencies = (
+@@ -1050,7 +1053,7 @@
+ 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+ 				MACOSX_DEPLOYMENT_TARGET = 14.0;
+ 				MARKETING_VERSION = 2.7.3;
+-				PRODUCT_BUNDLE_IDENTIFIER = theboringteam.boringnotch.BoringNotchXPCHelper;
++				PRODUCT_BUNDLE_IDENTIFIER = com.kuntisa.boringnotch.BoringNotchXPCHelper;
+ 				PRODUCT_NAME = "$(TARGET_NAME)";
+ 				REGISTER_APP_GROUPS = YES;
+ 				SKIP_INSTALL = YES;
+@@ -1075,7 +1078,7 @@
+ 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+ 				MACOSX_DEPLOYMENT_TARGET = 14.0;
+ 				MARKETING_VERSION = 2.7.3;
+-				PRODUCT_BUNDLE_IDENTIFIER = theboringteam.boringnotch.BoringNotchXPCHelper;
++				PRODUCT_BUNDLE_IDENTIFIER = com.kuntisa.boringnotch.BoringNotchXPCHelper;
+ 				PRODUCT_NAME = "$(TARGET_NAME)";
+ 				REGISTER_APP_GROUPS = YES;
+ 				SKIP_INSTALL = YES;
+@@ -1250,7 +1253,7 @@
+ 				);
+ 				MACOSX_DEPLOYMENT_TARGET = 14.0;
+ 				MARKETING_VERSION = 2.7.3;
+-				PRODUCT_BUNDLE_IDENTIFIER = theboringteam.boringnotch;
++				PRODUCT_BUNDLE_IDENTIFIER = com.kuntisa.boringnotch;
+ 				PRODUCT_NAME = "Boring Notch";
+ 				PROVISIONING_PROFILE_SPECIFIER = "";
+ 				SWIFT_EMIT_LOC_STRINGS = YES;
+@@ -1304,7 +1307,7 @@
+ 				);
+ 				MACOSX_DEPLOYMENT_TARGET = 14.0;
+ 				MARKETING_VERSION = 2.7.3;
+-				PRODUCT_BUNDLE_IDENTIFIER = theboringteam.boringnotch;
++				PRODUCT_BUNDLE_IDENTIFIER = com.kuntisa.boringnotch;
+ 				PRODUCT_NAME = "Boring Notch";
+ 				PROVISIONING_PROFILE_SPECIFIER = "";
+ 				SWIFT_EMIT_LOC_STRINGS = YES;
+diff --git a/boringNotch/BoringViewCoordinator.swift b/boringNotch/BoringViewCoordinator.swift
+index 59728b8..1ea5ee0 100644
+--- a/boringNotch/BoringViewCoordinator.swift
++++ b/boringNotch/BoringViewCoordinator.swift
+@@ -210,7 +210,8 @@ class BoringViewCoordinator: ObservableObject {
+         icon: String = ""
+     ) {
+         sneakPeekDuration = duration
+-        if type != .music {
++        // Mic toggles come from an explicit shortcut, so show them even without HUD replacement.
++        if type != .music && type != .mic {
+             // close()
+             if !Defaults[.hudReplacement] {
+                 return
+diff --git a/boringNotch/ContentView.swift b/boringNotch/ContentView.swift
+index 4bccee5..2f3c376 100644
+--- a/boringNotch/ContentView.swift
++++ b/boringNotch/ContentView.swift
+@@ -23,6 +23,7 @@ struct ContentView: View {
+     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
+     @ObservedObject var brightnessManager = BrightnessManager.shared
+     @ObservedObject var volumeManager = VolumeManager.shared
++    @ObservedObject var downloadMonitor = DownloadMonitor.shared
+     @State private var hoverTask: Task<Void, Never>?
+     @State private var isHovering: Bool = false
+     @State private var anyDropDebounceTask: Task<Void, Never>?
+@@ -58,6 +59,15 @@ struct ContentView: View {
+         )
+     }
+ 
++    /// An in-progress (or just-finished) browser download takes the closed notch over the music activity.
++    private var showDownloadActivity: Bool {
++        Defaults[.enableDownloadListener]
++            && vm.notchState == .closed
++            && !vm.hideOnClosed
++            && !coordinator.expandingView.show
++            && (downloadMonitor.isActive || downloadMonitor.recentlyCompleted != nil)
++    }
++
+     private var computedChinWidth: CGFloat {
+         var chinWidth: CGFloat = vm.closedNotchSize.width
+ 
+@@ -65,6 +75,8 @@ struct ContentView: View {
+             && vm.notchState == .closed && Defaults[.showPowerStatusNotifications]
+         {
+             chinWidth = 640
++        } else if showDownloadActivity {
++            chinWidth += (2 * max(0, vm.effectiveClosedNotchHeight - 12) + 20)
+         } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music)
+             && vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle)
+             && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed
+@@ -287,6 +299,9 @@ struct ContentView: View {
+                       } else if coordinator.sneakPeek.show && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && vm.notchState == .closed {
+                           InlineHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
+                               .transition(.opacity)
++                      } else if showDownloadActivity {
++                          DownloadLiveActivity()
++                              .transition(.opacity)
+                       } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music) && vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle) && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed {
+                           MusicLiveActivity()
+                               .frame(alignment: .center)
+@@ -349,6 +364,10 @@ struct ContentView: View {
+                         NotchHomeView(albumArtNamespace: albumArtNamespace)
+                     case .shelf:
+                         ShelfView()
++                    case .clipboard:
++                        ClipboardHistoryView()
++                    case .photoBooth:
++                        PhotoBoothView()
+                     }
+                 }
+                 .transition(
+diff --git a/boringNotch/Info.plist b/boringNotch/Info.plist
+index 4e47627..8b3f3d7 100644
+--- a/boringNotch/Info.plist
++++ b/boringNotch/Info.plist
+@@ -7,6 +7,10 @@
+ 		<key>NSAllowsArbitraryLoads</key>
+ 		<true/>
+ 	</dict>
++	<key>NSMicrophoneUsageDescription</key>
++	<string>Boring Notch mutes and unmutes your microphone from the notch.</string>
++	<key>SUEnableAutomaticChecks</key>
++	<false/>
+ 	<key>SUEnableDownloaderService</key>
+ 	<true/>
+ 	<key>SUEnableInstallerLauncherService</key>
+diff --git a/boringNotch/Shortcuts/ShortcutConstants.swift b/boringNotch/Shortcuts/ShortcutConstants.swift
+index 4e476a2..defce38 100644
+--- a/boringNotch/Shortcuts/ShortcutConstants.swift
++++ b/boringNotch/Shortcuts/ShortcutConstants.swift
+@@ -9,8 +9,10 @@ import KeyboardShortcuts
+ import SwiftUI
+ 
+ extension KeyboardShortcuts.Name {
+-    static let clipboardHistoryPanel = Self("clipboardHistoryPanel", default: .init(.c, modifiers: [.shift, .command]))
+-    static let toggleMicrophone = Self("toggleMicrophone", default: .init(.f5, modifiers: [.function]))
++    // Control-Option defaults avoid clashing with common app shortcuts (⇧⌘C is "Inspect" in Chrome and "Computer" in Finder).
++    static let clipboardHistoryPanel = Self("clipboardHistoryPanel", default: .init(.v, modifiers: [.control, .option]))
++    static let toggleMicrophone = Self("toggleMicrophone", default: .init(.m, modifiers: [.control, .option]))
++    static let openPhotoBooth = Self("openPhotoBooth", default: .init(.p, modifiers: [.control, .option]))
+     static let decreaseBacklight = Self("decreaseBacklight", default: .init(.f1, modifiers: [.command]))
+     static let increaseBacklight = Self("increaseBacklight", default: .init(.f2, modifiers: [.command]))
+     static let toggleSneakPeek = Self("toggleSneakPeek", default: .init(.h, modifiers: [.command, .shift]))
+diff --git a/boringNotch/XPCHelperClient/XPCHelperClient.swift b/boringNotch/XPCHelperClient/XPCHelperClient.swift
+index f8c6e23..3cf7430 100644
+--- a/boringNotch/XPCHelperClient/XPCHelperClient.swift
++++ b/boringNotch/XPCHelperClient/XPCHelperClient.swift
+@@ -5,7 +5,8 @@ import AsyncXPCConnection
+ final class XPCHelperClient: NSObject {
+     nonisolated static let shared = XPCHelperClient()
+     
+-    private let serviceName = "theboringteam.boringnotch.BoringNotchXPCHelper"
++    // The helper's bundle ID is always the app's bundle ID + ".BoringNotchXPCHelper".
++    private let serviceName = (Bundle.main.bundleIdentifier ?? "theboringteam.boringnotch") + ".BoringNotchXPCHelper"
+     
+     private var remoteService: RemoteXPCService<BoringNotchXPCHelperProtocol>?
+     private var connection: NSXPCConnection?
+diff --git a/boringNotch/boringNotch.entitlements b/boringNotch/boringNotch.entitlements
+index 7f3881d..b13288f 100644
+--- a/boringNotch/boringNotch.entitlements
++++ b/boringNotch/boringNotch.entitlements
+@@ -8,6 +8,12 @@
+ 	<true/>
+ 	<key>com.apple.security.device.camera</key>
+ 	<true/>
++	<key>com.apple.security.device.audio-input</key>
++	<true/>
++	<key>com.apple.security.files.downloads.read-only</key>
++	<true/>
++	<key>com.apple.security.assets.pictures.read-write</key>
++	<true/>
+ 	<key>com.apple.security.personal-information.calendars</key>
+ 	<true/>
+ 	<key>com.apple.security.files.bookmarks.app-scope</key>
+diff --git a/boringNotch/boringNotchApp.swift b/boringNotch/boringNotchApp.swift
+index ac1b936..2b4ed45 100644
+--- a/boringNotch/boringNotchApp.swift
++++ b/boringNotch/boringNotchApp.swift
+@@ -365,6 +365,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
+             }
+         }
+ 
++        KeyboardShortcuts.onKeyDown(for: .toggleMicrophone) { [weak self] in
++            Task { @MainActor in
++                guard let self = self else { return }
++                if let muted = MicrophoneManager.shared.toggle() {
++                    self.coordinator.toggleSneakPeek(
++                        status: true,
++                        type: .mic,
++                        duration: 1.5,
++                        value: muted ? 0 : 1
++                    )
++                } else {
++                    NSSound.beep()
++                }
++            }
++        }
++
++        KeyboardShortcuts.onKeyDown(for: .clipboardHistoryPanel) { [weak self] in
++            Task { @MainActor in
++                self?.toggleNotchTab(.clipboard, enabled: Defaults[.enableClipboardHistory])
++            }
++        }
++
++        KeyboardShortcuts.onKeyDown(for: .openPhotoBooth) { [weak self] in
++            Task { @MainActor in
++                self?.toggleNotchTab(.photoBooth, enabled: Defaults[.enablePhotoBooth], closeAfter: .seconds(30))
++            }
++        }
++
+         KeyboardShortcuts.onKeyDown(for: .toggleNotchOpen) { [weak self] in
+             Task { [weak self] in
+                 guard let self = self else { return }
+@@ -422,6 +450,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
+ 
+         setupDragDetectors()
+ 
++        // New features: start background watchers (each respects its own setting).
++        ClipboardHistoryManager.shared.start()
++        DownloadMonitor.shared.start()
++
+         if coordinator.firstLaunch {
+             DispatchQueue.main.async {
+                 self.showOnboardingWindow()
+@@ -438,6 +470,51 @@ class AppDelegate: NSObject, NSApplicationDelegate {
+         previousScreens = NSScreen.screens
+     }
+ 
++    /// Opens the notch on `tab` on the screen under the mouse, or closes it if that tab is already showing.
++    @MainActor
++    func toggleNotchTab(_ tab: NotchViews, enabled: Bool, closeAfter: Duration = .seconds(6)) {
++        guard enabled else {
++            NSSound.beep()
++            return
++        }
++
++        var viewModel = vm
++        if Defaults[.showOnAllDisplays] {
++            let mouseLocation = NSEvent.mouseLocation
++            if let screen = NSScreen.screens.first(where: { $0.frame.contains(mouseLocation) }),
++               let uuid = screen.displayUUID, let screenViewModel = viewModels[uuid] {
++                viewModel = screenViewModel
++            }
++        }
++
++        closeNotchTask?.cancel()
++        closeNotchTask = nil
++
++        if viewModel.notchState == .open && coordinator.currentView == tab {
++            viewModel.close()
++            return
++        }
++
++        coordinator.currentView = tab
++        withAnimation(.interactiveSpring(response: 0.38, dampingFraction: 0.8, blendDuration: 0)) {
++            viewModel.open()
++        }
++
++
++        // Opened from the keyboard, the pointer may never enter the notch, so close it
++        // after a while unless the pointer is over it. (A photo countdown also holds it open.)
++        closeNotchTask = Task { @MainActor [weak viewModel] in
++            try? await Task.sleep(for: closeAfter)
++            while !Task.isCancelled, let vm = viewModel, vm.notchState == .open, vm.isMouseHovering() {
++                try? await Task.sleep(for: .seconds(1))
++            }
++            guard !Task.isCancelled, let vm = viewModel, vm.notchState == .open else { return }
++            if BoringViewCoordinator.shared.currentView == tab {
++                vm.close()
++            }
++        }
++    }
++
+     func playWelcomeSound() {
+         let audioPlayer = AudioPlayer()
+         audioPlayer.play(fileName: "boring", fileExtension: "m4a")
+diff --git a/boringNotch/components/Music/MusicVisualizer.swift b/boringNotch/components/Music/MusicVisualizer.swift
+index f1913c3..3a6b864 100644
+--- a/boringNotch/components/Music/MusicVisualizer.swift
++++ b/boringNotch/components/Music/MusicVisualizer.swift
+@@ -6,6 +6,7 @@
+ //
+ import AppKit
+ import Cocoa
++import Defaults
+ import SwiftUI
+ 
+ class AudioSpectrum: NSView {
+@@ -13,6 +14,11 @@ class AudioSpectrum: NSView {
+     private var barScales: [CGFloat] = []
+     private var isPlaying: Bool = true
+     private var animationTimer: Timer?
++    /// True while the bars follow real system audio instead of random heights.
++    private var usesRealAudio = false
++    private var holdsAnalyzer = false
++    /// The setting's value when animation last started, to notice changes cheaply.
++    private var realAudioSetting = false
+     
+     override init(frame frameRect: NSRect) {
+         super.init(frame: frameRect)
+@@ -56,27 +62,62 @@ class AudioSpectrum: NSView {
+     
+     private func startAnimating() {
+         guard animationTimer == nil else { return }
+-        animationTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
++        realAudioSetting = Defaults[.realAudioVisualizer]
++        usesRealAudio = realAudioSetting && SystemAudioAnalyzer.hasPermission
++        if usesRealAudio && !holdsAnalyzer {
++            SystemAudioAnalyzer.shared.acquire()
++            holdsAnalyzer = true
++        }
++        let interval: TimeInterval = usesRealAudio ? 1.0 / 30.0 : 0.3
++        animationTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+             self?.updateBars()
+         }
+     }
+-    
++
+     private func stopAnimating() {
+         animationTimer?.invalidate()
+         animationTimer = nil
++        if holdsAnalyzer {
++            SystemAudioAnalyzer.shared.release()
++            holdsAnalyzer = false
++        }
+         resetBars()
+     }
+-    
++
++    override func viewDidMoveToWindow() {
++        super.viewDidMoveToWindow()
++        if window == nil {
++            stopAnimating()
++        } else if isPlaying {
++            startAnimating()
++        }
++    }
++
+     private func updateBars() {
++        // Follow the setting if it was changed while playing.
++        if Defaults[.realAudioVisualizer] != realAudioSetting {
++            stopAnimating()
++            startAnimating()
++            return
++        }
++
++        let realLevels = usesRealAudio ? SystemAudioAnalyzer.shared.currentLevels() : nil
++        let isReal = realLevels?.count == barLayers.count
++
+         for (i, barLayer) in barLayers.enumerated() {
+             let currentScale = barScales[i]
+-            let targetScale = CGFloat.random(in: 0.35 ... 1.0)
++            let targetScale: CGFloat
++            if isReal, let levels = realLevels {
++                targetScale = 0.35 + 0.65 * CGFloat(levels[i])
++            } else {
++                targetScale = CGFloat.random(in: 0.35 ... 1.0)
++            }
+             barScales[i] = targetScale
+             let animation = CABasicAnimation(keyPath: "transform.scale.y")
+             animation.fromValue = currentScale
+             animation.toValue = targetScale
+-            animation.duration = 0.3
+-            animation.autoreverses = true
++            animation.duration = isReal ? 1.0 / 30.0 : 0.3
++            animation.autoreverses = !isReal
+             animation.fillMode = .forwards
+             animation.isRemovedOnCompletion = false
+             if #available(macOS 13.0, *) {
+diff --git a/boringNotch/components/Notch/BoringHeader.swift b/boringNotch/components/Notch/BoringHeader.swift
+index b46cbeb..5ce36b6 100644
+--- a/boringNotch/components/Notch/BoringHeader.swift
++++ b/boringNotch/components/Notch/BoringHeader.swift
+@@ -16,7 +16,7 @@ struct BoringHeader: View {
+     var body: some View {
+         HStack(spacing: 0) {
+             HStack {
+-                if (!tvm.isEmpty || coordinator.alwaysShowTabs) && Defaults[.boringShelf] {
++                if ((!tvm.isEmpty || coordinator.alwaysShowTabs) && Defaults[.boringShelf]) || Defaults[.enableClipboardHistory] || Defaults[.enablePhotoBooth] {
+                     TabSelectionView()
+                 } else if vm.notchState == .open {
+                     EmptyView()
+diff --git a/boringNotch/components/Settings/SettingsView.swift b/boringNotch/components/Settings/SettingsView.swift
+index cff23f3..9ef6379 100644
+--- a/boringNotch/components/Settings/SettingsView.swift
++++ b/boringNotch/components/Settings/SettingsView.swift
+@@ -45,12 +45,18 @@ struct SettingsView: View {
+                 NavigationLink(value: "Battery") {
+                     Label("Battery", systemImage: "battery.100.bolt")
+                 }
+-//                NavigationLink(value: "Downloads") {
+-//                    Label("Downloads", systemImage: "square.and.arrow.down")
+-//                }
++                NavigationLink(value: "Downloads") {
++                    Label("Downloads", systemImage: "square.and.arrow.down")
++                }
+                 NavigationLink(value: "Shelf") {
+                     Label("Shelf", systemImage: "books.vertical")
+                 }
++                NavigationLink(value: "Clipboard") {
++                    Label("Clipboard", systemImage: "doc.on.clipboard")
++                }
++                NavigationLink(value: "PhotoBooth") {
++                    Label("Photo Booth", systemImage: "camera")
++                }
+                 NavigationLink(value: "Shortcuts") {
+                     Label("Shortcuts", systemImage: "keyboard")
+                 }
+@@ -83,8 +89,14 @@ struct SettingsView: View {
+                     HUD()
+                 case "Battery":
+                     Charge()
++                case "Downloads":
++                    DownloadsSettings()
+                 case "Shelf":
+                     Shelf()
++                case "Clipboard":
++                    ClipboardSettings()
++                case "PhotoBooth":
++                    PhotoBoothSettings()
+                 case "Shortcuts":
+                     Shortcuts()
+                 case "Extensions":
+@@ -1202,6 +1214,8 @@ struct Appearance: View {
+                 Text("Media")
+             }
+ 
++            RealAudioVisualizerSection()
++
+             Section {
+                 Toggle(
+                     "Use music visualizer spectrogram",
+@@ -1739,6 +1753,18 @@ struct Shortcuts: View {
+             }
+             Section {
+                 KeyboardShortcuts.Recorder("Toggle Notch Open:", name: .toggleNotchOpen)
++                KeyboardShortcuts.Recorder("Open Clipboard History:", name: .clipboardHistoryPanel)
++                KeyboardShortcuts.Recorder("Open Photo Booth:", name: .openPhotoBooth)
++            }
++            Section {
++                KeyboardShortcuts.Recorder("Mute / Unmute Microphone:", name: .toggleMicrophone)
++            } header: {
++                Text("Microphone")
++            } footer: {
++                Text("Mutes the default input device and shows the result in the notch.")
++                    .multilineTextAlignment(.trailing)
++                    .foregroundStyle(.secondary)
++                    .font(.caption)
+             }
+         }
+         .accentColor(.effectiveAccent)
+diff --git a/boringNotch/components/Tabs/TabButton.swift b/boringNotch/components/Tabs/TabButton.swift
+index e6eb6b4..0cea903 100644
+--- a/boringNotch/components/Tabs/TabButton.swift
++++ b/boringNotch/components/Tabs/TabButton.swift
+@@ -20,6 +20,7 @@ struct TabButton: View {
+                 .contentShape(Capsule())
+         }
+         .buttonStyle(PlainButtonStyle())
++        .help(label)
+     }
+ }
+ 
+diff --git a/boringNotch/components/Tabs/TabSelectionView.swift b/boringNotch/components/Tabs/TabSelectionView.swift
+index b99d4af..92ab9cc 100644
+--- a/boringNotch/components/Tabs/TabSelectionView.swift
++++ b/boringNotch/components/Tabs/TabSelectionView.swift
+@@ -5,19 +5,30 @@
+ //  Created by Hugo Persson on 2024-08-25.
+ //
+ 
++import Defaults
+ import SwiftUI
+ 
+ struct TabModel: Identifiable {
+-    let id = UUID()
++    // Stable per view, because the tab list is rebuilt from settings on every redraw.
++    var id: NotchViews { view }
+     let label: String
+     let icon: String
+     let view: NotchViews
+ }
+ 
+-let tabs = [
+-    TabModel(label: "Home", icon: "house.fill", view: .home),
+-    TabModel(label: "Shelf", icon: "tray.fill", view: .shelf)
+-]
++var tabs: [TabModel] {
++    var result = [TabModel(label: "Home", icon: "house.fill", view: .home)]
++    if Defaults[.boringShelf] {
++        result.append(TabModel(label: "Shelf", icon: "tray.fill", view: .shelf))
++    }
++    if Defaults[.enableClipboardHistory] {
++        result.append(TabModel(label: "Clipboard", icon: "doc.on.clipboard.fill", view: .clipboard))
++    }
++    if Defaults[.enablePhotoBooth] {
++        result.append(TabModel(label: "Photo Booth", icon: "camera.fill", view: .photoBooth))
++    }
++    return result
++}
+ 
+ struct TabSelectionView: View {
+     @ObservedObject var coordinator = BoringViewCoordinator.shared
+diff --git a/boringNotch/enums/generic.swift b/boringNotch/enums/generic.swift
+index e70b459..7a71a64 100644
+--- a/boringNotch/enums/generic.swift
++++ b/boringNotch/enums/generic.swift
+@@ -27,6 +27,8 @@ public enum NotchState {
+ public enum NotchViews {
+     case home
+     case shelf
++    case clipboard
++    case photoBooth
+ }
+ 
+ enum SettingsEnum {
+diff --git a/boringNotch/features/ClipboardHistoryManager.swift b/boringNotch/features/ClipboardHistoryManager.swift
+new file mode 100644
+index 0000000..9f3adbf
+--- /dev/null
++++ b/boringNotch/features/ClipboardHistoryManager.swift
+@@ -0,0 +1,180 @@
++//
++//  ClipboardHistoryManager.swift
++//  boringNotch
++//
++//  Keeps an in-memory list of recently copied text and images.
++//  Nothing is written to disk. Items marked as concealed or transient
++//  (password managers, see nspasteboard.org) are never recorded.
++//
++
++import AppKit
++import Combine
++import Defaults
++
++struct ClipboardEntry: Identifiable, Equatable {
++    enum Content: Equatable {
++        case text(String)
++        case image(Data, NSPasteboard.PasteboardType)
++    }
++
++    let id: UUID
++    let content: Content
++    let date: Date
++    let sourceBundleID: String?
++
++    init(content: Content, date: Date = Date(), sourceBundleID: String?) {
++        self.id = UUID()
++        self.content = content
++        self.date = date
++        self.sourceBundleID = sourceBundleID
++    }
++
++    var previewText: String {
++        switch content {
++        case .text(let string):
++            return string.trimmingCharacters(in: .whitespacesAndNewlines)
++        case .image:
++            return "Image"
++        }
++    }
++
++    static func == (lhs: ClipboardEntry, rhs: ClipboardEntry) -> Bool {
++        lhs.id == rhs.id
++    }
++}
++
++@MainActor
++final class ClipboardHistoryManager: ObservableObject {
++    static let shared = ClipboardHistoryManager()
++
++    @Published private(set) var entries: [ClipboardEntry] = []
++    @Published private(set) var lastCopiedID: UUID?
++
++    private let pasteboard = NSPasteboard.general
++    private var lastChangeCount: Int
++    private var timer: Timer?
++    private var cancellables = Set<AnyCancellable>()
++
++    /// Images larger than this are skipped to keep memory use small.
++    private let maxImageBytes = 8 * 1024 * 1024
++
++    private static let ignoredTypes: Set<String> = [
++        "org.nspasteboard.ConcealedType",
++        "org.nspasteboard.TransientType",
++        "org.nspasteboard.AutoGeneratedType",
++        "com.agilebits.onepassword",
++        "de.petermaurer.TransientPasteboardType",
++    ]
++
++    private init() {
++        lastChangeCount = pasteboard.changeCount
++
++        Defaults.publisher(.enableClipboardHistory)
++            .sink { [weak self] change in
++                Task { @MainActor in
++                    if change.newValue {
++                        self?.start()
++                    } else {
++                        self?.stop()
++                        self?.clear()
++                    }
++                }
++            }
++            .store(in: &cancellables)
++
++        Defaults.publisher(.clipboardHistoryLimit)
++            .sink { [weak self] _ in
++                Task { @MainActor in self?.trimToLimit() }
++            }
++            .store(in: &cancellables)
++    }
++
++    // MARK: - Monitoring
++
++    func start() {
++        guard timer == nil, Defaults[.enableClipboardHistory] else { return }
++        lastChangeCount = pasteboard.changeCount
++        let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
++            Task { @MainActor in self?.poll() }
++        }
++        RunLoop.main.add(timer, forMode: .common)
++        self.timer = timer
++    }
++
++    func stop() {
++        timer?.invalidate()
++        timer = nil
++    }
++
++    private func poll() {
++        let count = pasteboard.changeCount
++        guard count != lastChangeCount else { return }
++        lastChangeCount = count
++        capture()
++    }
++
++    private func capture() {
++        let types = pasteboard.types ?? []
++        if types.contains(where: { Self.ignoredTypes.contains($0.rawValue) }) { return }
++
++        let source = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
++
++        // Prefer text: most copies (including from rich-text apps) carry a plain string.
++        if let string = pasteboard.string(forType: .string),
++           !string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
++            insert(ClipboardEntry(content: .text(string), sourceBundleID: source))
++            return
++        }
++
++        guard Defaults[.clipboardIncludeImages] else { return }
++        for type in [NSPasteboard.PasteboardType.png, .tiff] {
++            if let data = pasteboard.data(forType: type), data.count <= maxImageBytes {
++                insert(ClipboardEntry(content: .image(data, type), sourceBundleID: source))
++                return
++            }
++        }
++    }
++
++    private func insert(_ entry: ClipboardEntry) {
++        // Move an identical item to the top instead of storing it twice.
++        entries.removeAll { $0.content == entry.content }
++        entries.insert(entry, at: 0)
++        trimToLimit()
++    }
++
++    private func trimToLimit() {
++        let limit = max(1, Defaults[.clipboardHistoryLimit])
++        if entries.count > limit {
++            entries.removeLast(entries.count - limit)
++        }
++    }
++
++    // MARK: - Actions
++
++    /// Puts an entry back on the clipboard so it can be pasted with ⌘V.
++    func copy(_ entry: ClipboardEntry) {
++        pasteboard.clearContents()
++        switch entry.content {
++        case .text(let string):
++            pasteboard.setString(string, forType: .string)
++        case .image(let data, let type):
++            pasteboard.setData(data, forType: type)
++        }
++        // Don't record our own write as a new copy, just move the item up.
++        lastChangeCount = pasteboard.changeCount
++        if let index = entries.firstIndex(of: entry) {
++            let moved = entries.remove(at: index)
++            entries.insert(moved, at: 0)
++        }
++        lastCopiedID = entry.id
++    }
++
++    func remove(_ entry: ClipboardEntry) {
++        entries.removeAll { $0.id == entry.id }
++    }
++
++    func clear() {
++        entries.removeAll()
++        lastCopiedID = nil
++    }
++}
+diff --git a/boringNotch/features/ClipboardHistoryView.swift b/boringNotch/features/ClipboardHistoryView.swift
+new file mode 100644
+index 0000000..6c3d2e8
+--- /dev/null
++++ b/boringNotch/features/ClipboardHistoryView.swift
+@@ -0,0 +1,153 @@
++//
++//  ClipboardHistoryView.swift
++//  boringNotch
++//
++//  The Clipboard tab of the open notch: recent copies as cards.
++//  Click a card to copy it again, then paste with ⌘V.
++//
++
++import AppKit
++import Defaults
++import SwiftUI
++
++struct ClipboardHistoryView: View {
++    @EnvironmentObject var vm: BoringViewModel
++    @ObservedObject private var manager = ClipboardHistoryManager.shared
++    @Default(.enableClipboardHistory) private var enabled
++
++    var body: some View {
++        Group {
++            if !enabled {
++                placeholder(icon: "clipboard", title: "Clipboard history is off", subtitle: "Turn it on in Settings › Clipboard")
++            } else if manager.entries.isEmpty {
++                placeholder(icon: "doc.on.clipboard", title: "Nothing copied yet", subtitle: "Text and images you copy will show up here")
++            } else {
++                HStack(alignment: .top, spacing: 10) {
++                    ScrollView(.horizontal, showsIndicators: false) {
++                        LazyHStack(spacing: 8) {
++                            ForEach(manager.entries) { entry in
++                                ClipboardCard(
++                                    entry: entry,
++                                    justCopied: manager.lastCopiedID == entry.id,
++                                    onCopy: { copyAndClose(entry) },
++                                    onRemove: { withAnimation(.smooth) { manager.remove(entry) } }
++                                )
++                            }
++                        }
++                        .padding(.vertical, 2)
++                    }
++                    Button {
++                        withAnimation(.smooth) { manager.clear() }
++                    } label: {
++                        Image(systemName: "trash")
++                            .font(.system(size: 13, weight: .medium))
++                            .foregroundStyle(.gray)
++                            .frame(width: 28, height: 28)
++                            .background(Circle().fill(Color.white.opacity(0.08)))
++                    }
++                    .buttonStyle(.plain)
++                    .help("Clear clipboard history")
++                }
++            }
++        }
++        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
++    }
++
++    private func copyAndClose(_ entry: ClipboardEntry) {
++        manager.copy(entry)
++        Task { @MainActor in
++            try? await Task.sleep(for: .milliseconds(450))
++            vm.close()
++        }
++    }
++
++    private func placeholder(icon: String, title: String, subtitle: String) -> some View {
++        VStack(spacing: 6) {
++            Image(systemName: icon)
++                .font(.system(size: 22))
++                .foregroundStyle(.gray)
++            Text(title)
++                .font(.system(size: 13, weight: .medium))
++                .foregroundStyle(.white)
++            Text(subtitle)
++                .font(.system(size: 11))
++                .foregroundStyle(.gray)
++        }
++        .frame(maxWidth: .infinity, maxHeight: .infinity)
++    }
++}
++
++private struct ClipboardCard: View {
++    let entry: ClipboardEntry
++    let justCopied: Bool
++    let onCopy: () -> Void
++    let onRemove: () -> Void
++
++    @State private var isHovering = false
++
++    var body: some View {
++        Button(action: onCopy) {
++            VStack(alignment: .leading, spacing: 6) {
++                content
++                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
++                HStack(spacing: 4) {
++                    if let bundleID = entry.sourceBundleID, let icon = AppIconAsNSImage(for: bundleID) {
++                        Image(nsImage: icon)
++                            .resizable()
++                            .frame(width: 12, height: 12)
++                    }
++                    Text(justCopied ? "Copied" : entry.date.formatted(.relative(presentation: .numeric)))
++                        .font(.system(size: 10))
++                        .foregroundStyle(justCopied ? Color.green : .gray)
++                        .lineLimit(1)
++                    Spacer(minLength: 0)
++                }
++            }
++            .padding(8)
++            .frame(width: 128, height: 104)
++            .background(
++                RoundedRectangle(cornerRadius: 10)
++                    .fill(Color.white.opacity(isHovering ? 0.14 : 0.08))
++            )
++            .contentShape(RoundedRectangle(cornerRadius: 10))
++        }
++        .buttonStyle(.plain)
++        .help("Click to copy, then paste with ⌘V")
++        // Kept outside the copy button so clicking it only removes the item.
++        .overlay(alignment: .topTrailing) {
++            if isHovering {
++                Button(action: onRemove) {
++                    Image(systemName: "xmark.circle.fill")
++                        .font(.system(size: 13))
++                        .foregroundStyle(.gray)
++                }
++                .buttonStyle(.plain)
++                .padding(4)
++                .help("Remove")
++            }
++        }
++        .onHover { isHovering = $0 }
++    }
++
++    @ViewBuilder
++    private var content: some View {
++        switch entry.content {
++        case .text(let string):
++            Text(string.trimmingCharacters(in: .whitespacesAndNewlines))
++                .font(.system(size: 11))
++                .foregroundStyle(.white)
++                .lineLimit(5)
++                .multilineTextAlignment(.leading)
++        case .image(let data, _):
++            if let image = NSImage(data: data) {
++                Image(nsImage: image)
++                    .resizable()
++                    .scaledToFit()
++                    .clipShape(RoundedRectangle(cornerRadius: 6))
++            } else {
++                Image(systemName: "photo")
++                    .foregroundStyle(.gray)
++            }
++        }
++    }
++}
+diff --git a/boringNotch/features/DownloadLiveActivity.swift b/boringNotch/features/DownloadLiveActivity.swift
+new file mode 100644
+index 0000000..243d571
+--- /dev/null
++++ b/boringNotch/features/DownloadLiveActivity.swift
+@@ -0,0 +1,149 @@
++//
++//  DownloadLiveActivity.swift
++//  boringNotch
++//
++//  Closed-notch indicator for an in-progress browser download:
++//  browser icon on the left of the notch, progress on the right.
++//
++
++import Defaults
++import SwiftUI
++
++struct DownloadLiveActivity: View {
++    @EnvironmentObject var vm: BoringViewModel
++    @ObservedObject private var monitor = DownloadMonitor.shared
++    @Default(.selectedDownloadIndicatorStyle) private var indicatorStyle
++    @Default(.selectedDownloadIconStyle) private var iconStyle
++
++    var body: some View {
++        let side = max(0, vm.effectiveClosedNotchHeight - 12)
++
++        HStack {
++            leadingIcon
++                .frame(width: side, height: side)
++
++            Rectangle()
++                .fill(.black)
++                .frame(width: vm.closedNotchSize.width - cornerRadiusInsets.closed.top)
++
++            trailingIndicator
++                .frame(width: side, height: side)
++        }
++        .frame(height: vm.effectiveClosedNotchHeight, alignment: .center)
++        .help(helpText)
++    }
++
++    // MARK: - Pieces
++
++    @ViewBuilder
++    private var leadingIcon: some View {
++        if monitor.downloads.isEmpty, monitor.recentlyCompleted != nil {
++            Image(systemName: "checkmark.circle.fill")
++                .resizable()
++                .scaledToFit()
++                .foregroundStyle(.green)
++        } else if let download = monitor.primary {
++            switch iconStyle {
++            case .onlyIcon:
++                Image(systemName: "arrow.down.circle.fill")
++                    .resizable()
++                    .scaledToFit()
++                    .foregroundStyle(.white)
++            case .onlyAppIcon:
++                appIcon(for: download)
++            case .iconAndAppIcon:
++                appIcon(for: download)
++                    .overlay(alignment: .bottomTrailing) {
++                        Image(systemName: "arrow.down.circle.fill")
++                            .font(.system(size: 8))
++                            .foregroundStyle(.white, .blue)
++                    }
++            }
++        }
++    }
++
++    @ViewBuilder
++    private func appIcon(for download: ActiveDownload) -> some View {
++        if let icon = AppIconAsNSImage(for: download.bundleID) {
++            Image(nsImage: icon)
++                .resizable()
++                .scaledToFit()
++        } else {
++            Image(systemName: "arrow.down.circle.fill")
++                .resizable()
++                .scaledToFit()
++                .foregroundStyle(.white)
++        }
++    }
++
++    @ViewBuilder
++    private var trailingIndicator: some View {
++        if monitor.downloads.isEmpty, monitor.recentlyCompleted != nil {
++            ProgressRing(progress: 1, tint: .green)
++        } else if let download = monitor.primary {
++            if let progress = download.progress {
++                if indicatorStyle == .percentage {
++                    Text("\(Int(progress * 100))%")
++                        .font(.system(size: 9, weight: .semibold))
++                        .monospacedDigit()
++                        .minimumScaleFactor(0.6)
++                        .lineLimit(1)
++                        .foregroundStyle(.white)
++                } else {
++                    ProgressRing(progress: progress, tint: .effectiveAccent)
++                }
++            } else {
++                // Chrome and Firefox don't expose the total size on disk.
++                IndeterminateRing()
++            }
++        }
++    }
++
++    private var helpText: String {
++        if monitor.downloads.isEmpty, let name = monitor.recentlyCompleted {
++            return "Downloaded \(name)"
++        }
++        guard let download = monitor.primary else { return "" }
++        let done = ByteCountFormatter.string(fromByteCount: download.bytesSoFar, countStyle: .file)
++        var text = "Downloading \(download.name) · \(done)"
++        if let total = download.totalBytes {
++            text += " of " + ByteCountFormatter.string(fromByteCount: total, countStyle: .file)
++        }
++        if monitor.downloads.count > 1 {
++            text += " (+\(monitor.downloads.count - 1) more)"
++        }
++        return text
++    }
++}
++
++private struct ProgressRing: View {
++    let progress: Double
++    let tint: Color
++
++    var body: some View {
++        ZStack {
++            Circle()
++                .stroke(Color.white.opacity(0.2), lineWidth: 2.5)
++            Circle()
++                .trim(from: 0, to: progress)
++                .stroke(tint, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
++                .rotationEffect(.degrees(-90))
++                .animation(.smooth, value: progress)
++        }
++        .padding(2)
++    }
++}
++
++private struct IndeterminateRing: View {
++    @State private var spinning = false
++
++    var body: some View {
++        Circle()
++            .trim(from: 0, to: 0.3)
++            .stroke(Color.white, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
++            .rotationEffect(.degrees(spinning ? 360 : 0))
++            .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: spinning)
++            .onAppear { spinning = true }
++            .padding(2)
++    }
++}
+diff --git a/boringNotch/features/DownloadMonitor.swift b/boringNotch/features/DownloadMonitor.swift
+new file mode 100644
+index 0000000..07d61bd
+--- /dev/null
++++ b/boringNotch/features/DownloadMonitor.swift
+@@ -0,0 +1,220 @@
++//
++//  DownloadMonitor.swift
++//  boringNotch
++//
++//  Watches ~/Downloads for in-progress browser downloads:
++//    • Safari:   "name.download" bundles (Info.plist inside carries bytes so far and total)
++//    • Chromium: "name.crdownload" files (Chrome, Edge, Brave, Arc, Vivaldi, Opera) — size only
++//    • Firefox:  "name.part" files — size only
++//  Needs the com.apple.security.files.downloads.read-only entitlement (the app is sandboxed).
++//
++
++import AppKit
++import Combine
++import Darwin
++import Defaults
++
++struct ActiveDownload: Identifiable, Equatable {
++    enum Source: Equatable {
++        case safari
++        case chromium
++        case firefox
++
++        var fallbackBundleID: String {
++            switch self {
++            case .safari: return "com.apple.Safari"
++            case .chromium: return "com.google.Chrome"
++            case .firefox: return "org.mozilla.firefox"
++            }
++        }
++    }
++
++    /// The partial file's path; stable for the life of the download.
++    let id: String
++    let name: String
++    let source: Source
++    let bundleID: String
++    var bytesSoFar: Int64
++    var totalBytes: Int64?
++
++    /// 0...1 when the total size is known, otherwise nil.
++    var progress: Double? {
++        guard let total = totalBytes, total > 0 else { return nil }
++        return min(1, max(0, Double(bytesSoFar) / Double(total)))
++    }
++}
++
++@MainActor
++final class DownloadMonitor: ObservableObject {
++    static let shared = DownloadMonitor()
++
++    @Published private(set) var downloads: [ActiveDownload] = []
++    /// Name of a download that just finished; cleared after a few seconds.
++    @Published private(set) var recentlyCompleted: String?
++
++    var isActive: Bool { !downloads.isEmpty }
++
++    /// The download shown in the notch: the one with the most data still to come.
++    var primary: ActiveDownload? {
++        downloads.max { lhs, rhs in
++            let l = (lhs.totalBytes ?? lhs.bytesSoFar) - lhs.bytesSoFar
++            let r = (rhs.totalBytes ?? rhs.bytesSoFar) - rhs.bytesSoFar
++            return l < r
++        }
++    }
++
++    private var loopTask: Task<Void, Never>?
++    private var completedTask: Task<Void, Never>?
++    private var cancellables = Set<AnyCancellable>()
++
++    private static let chromiumBundleIDs = [
++        "com.google.Chrome", "com.microsoft.edgemac", "com.brave.Browser",
++        "company.thebrowser.Browser", "com.vivaldi.Vivaldi", "com.operasoftware.Opera",
++    ]
++
++    /// The real ~/Downloads. Inside the sandbox, FileManager's home points at the app container,
++    /// so read the home directory from the user database instead.
++    private let downloadsURL: URL = {
++        if let pw = getpwuid(getuid()), let dir = pw.pointee.pw_dir {
++            return URL(fileURLWithPath: String(cString: dir)).appendingPathComponent("Downloads", isDirectory: true)
++        }
++        return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads", isDirectory: true)
++    }()
++
++    private init() {
++        Defaults.publisher(.enableDownloadListener, options: [])
++            .sink { [weak self] change in
++                Task { @MainActor in
++                    if change.newValue { self?.start() } else { self?.stop() }
++                }
++            }
++            .store(in: &cancellables)
++    }
++
++    // MARK: - Monitoring
++
++    func start() {
++        guard loopTask == nil, Defaults[.enableDownloadListener] else { return }
++        loopTask = Task { @MainActor [weak self] in
++            while !Task.isCancelled {
++                guard let self = self else { return }
++                self.scan()
++                // Poll quickly while something is downloading, slowly otherwise.
++                let interval: Duration = self.isActive ? .milliseconds(500) : .seconds(2)
++                try? await Task.sleep(for: interval)
++            }
++        }
++    }
++
++    func stop() {
++        loopTask?.cancel()
++        loopTask = nil
++        downloads = []
++    }
++
++    private func scan() {
++        let fm = FileManager.default
++        guard let items = try? fm.contentsOfDirectory(
++            at: downloadsURL,
++            includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey],
++            options: [.skipsHiddenFiles]
++        ) else {
++            return
++        }
++
++        var found: [ActiveDownload] = []
++        for url in items {
++            switch url.pathExtension.lowercased() {
++            case "download":
++                guard Defaults[.enableSafariDownloads] else { continue }
++                if let item = safariDownload(at: url) { found.append(item) }
++            case "crdownload":
++                found.append(sizeOnlyDownload(at: url, source: .chromium, bundleID: runningChromiumBundleID()))
++            case "part":
++                found.append(sizeOnlyDownload(at: url, source: .firefox, bundleID: ActiveDownload.Source.firefox.fallbackBundleID))
++            default:
++                continue
++            }
++        }
++        found.sort { $0.id < $1.id }
++
++        // Anything that disappeared and left its final file behind has finished.
++        let finished = downloads.filter { old in !found.contains(where: { $0.id == old.id }) }
++        if let done = finished.first(where: { fm.fileExists(atPath: downloadsURL.appendingPathComponent($0.name).path) }) {
++            showCompleted(done.name)
++        }
++
++        if found != downloads {
++            downloads = found
++        }
++    }
++
++    private func showCompleted(_ name: String) {
++        recentlyCompleted = name
++        completedTask?.cancel()
++        completedTask = Task { @MainActor [weak self] in
++            try? await Task.sleep(for: .seconds(3))
++            guard !Task.isCancelled else { return }
++            self?.recentlyCompleted = nil
++        }
++    }
++
++    // MARK: - Parsers
++
++    private func safariDownload(at bundleURL: URL) -> ActiveDownload? {
++        let name = bundleURL.deletingPathExtension().lastPathComponent
++        var bytes: Int64 = 0
++        var total: Int64?
++
++        let plistURL = bundleURL.appendingPathComponent("Info.plist")
++        if let data = try? Data(contentsOf: plistURL),
++           let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] {
++            bytes = (plist["DownloadEntryProgressBytesSoFar"] as? NSNumber)?.int64Value ?? 0
++            if let t = (plist["DownloadEntryProgressTotalToLoad"] as? NSNumber)?.int64Value, t > 0 {
++                total = t
++            }
++        }
++
++        // Safari doesn't rewrite Info.plist on every chunk, so the partial file inside is fresher.
++        if let contents = try? FileManager.default.contentsOfDirectory(
++            at: bundleURL, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles]
++        ) {
++            let largest = contents
++                .filter { $0.lastPathComponent != "Info.plist" }
++                .compactMap { (try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize).map { Int64($0) } }
++                .max() ?? 0
++            bytes = max(bytes, largest)
++        }
++
++        return ActiveDownload(
++            id: bundleURL.path,
++            name: name,
++            source: .safari,
++            bundleID: ActiveDownload.Source.safari.fallbackBundleID,
++            bytesSoFar: bytes,
++            totalBytes: total
++        )
++    }
++
++    private func sizeOnlyDownload(at url: URL, source: ActiveDownload.Source, bundleID: String) -> ActiveDownload {
++        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize).map { Int64($0) } ?? 0
++        return ActiveDownload(
++            id: url.path,
++            name: url.deletingPathExtension().lastPathComponent,
++            source: source,
++            bundleID: bundleID,
++            bytesSoFar: size,
++            totalBytes: nil
++        )
++    }
++
++    /// .crdownload doesn't say which Chromium browser wrote it; guess the frontmost or first running one.
++    private func runningChromiumBundleID() -> String {
++        if let front = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
++           Self.chromiumBundleIDs.contains(front) {
++            return front
++        }
++        let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
++        return Self.chromiumBundleIDs.first(where: running.contains) ?? ActiveDownload.Source.chromium.fallbackBundleID
++    }
++}
+diff --git a/boringNotch/features/FeatureSettings.swift b/boringNotch/features/FeatureSettings.swift
+new file mode 100644
+index 0000000..5825c77
+--- /dev/null
++++ b/boringNotch/features/FeatureSettings.swift
+@@ -0,0 +1,184 @@
++//
++//  FeatureSettings.swift
++//  boringNotch
++//
++//  Settings pages for clipboard history, downloads and the audio-reactive visualizer.
++//
++
++import Defaults
++import KeyboardShortcuts
++import SwiftUI
++
++struct ClipboardSettings: View {
++    @Default(.enableClipboardHistory) private var enabled
++    @Default(.clipboardHistoryLimit) private var limit
++    @ObservedObject private var manager = ClipboardHistoryManager.shared
++
++    var body: some View {
++        Form {
++            Section {
++                Defaults.Toggle(key: .enableClipboardHistory) {
++                    Text("Keep clipboard history")
++                }
++                Defaults.Toggle(key: .clipboardIncludeImages) {
++                    Text("Include images")
++                }
++                .disabled(!enabled)
++                Stepper(value: $limit, in: 5...100, step: 5) {
++                    HStack {
++                        Text("Items to keep")
++                        Spacer()
++                        Text("\(limit)")
++                            .foregroundStyle(.secondary)
++                            .monospacedDigit()
++                    }
++                }
++                .disabled(!enabled)
++            } header: {
++                Text("History")
++            } footer: {
++                Text("History stays in memory only and is cleared when the app quits. Passwords copied from password managers that mark them as concealed are never saved.")
++                    .foregroundStyle(.secondary)
++                    .font(.caption)
++            }
++
++            Section {
++                KeyboardShortcuts.Recorder("Open clipboard history:", name: .clipboardHistoryPanel)
++                Button("Clear history (\(manager.entries.count) items)") {
++                    manager.clear()
++                }
++                .disabled(manager.entries.isEmpty)
++            } footer: {
++                Text("Click an item in the notch to copy it again, then paste with ⌘V.")
++                    .foregroundStyle(.secondary)
++                    .font(.caption)
++            }
++        }
++        .accentColor(.effectiveAccent)
++        .navigationTitle("Clipboard")
++    }
++}
++
++struct DownloadsSettings: View {
++    @Default(.enableDownloadListener) private var enabled
++    @Default(.selectedDownloadIndicatorStyle) private var indicatorStyle
++    @Default(.selectedDownloadIconStyle) private var iconStyle
++
++    var body: some View {
++        Form {
++            Section {
++                Defaults.Toggle(key: .enableDownloadListener) {
++                    Text("Show download progress in the notch")
++                }
++                Defaults.Toggle(key: .enableSafariDownloads) {
++                    Text("Include Safari downloads")
++                }
++                .disabled(!enabled)
++                Picker("Progress style", selection: $indicatorStyle) {
++                    Text("Ring").tag(DownloadIndicatorStyle.progress)
++                    Text("Percentage").tag(DownloadIndicatorStyle.percentage)
++                }
++                .disabled(!enabled)
++                Picker("Icon", selection: $iconStyle) {
++                    Text("Browser icon").tag(DownloadIconStyle.onlyAppIcon)
++                    Text("Download arrow").tag(DownloadIconStyle.onlyIcon)
++                    Text("Both").tag(DownloadIconStyle.iconAndAppIcon)
++                }
++                .disabled(!enabled)
++            } header: {
++                Text("Download indicator")
++            } footer: {
++                Text("Watches your Downloads folder for files Safari, Chrome-based browsers and Firefox are still writing. Safari reports the total size, so it shows exact progress; Chrome and Firefox show a spinner instead. Hover the notch indicator to see the file name and size.")
++                    .foregroundStyle(.secondary)
++                    .font(.caption)
++            }
++        }
++        .accentColor(.effectiveAccent)
++        .navigationTitle("Downloads")
++    }
++}
++
++/// Section placed in Settings › Appearance.
++struct RealAudioVisualizerSection: View {
++    @Default(.realAudioVisualizer) private var realAudio
++    @State private var hasPermission = SystemAudioAnalyzer.hasPermission
++
++    var body: some View {
++        Section {
++            Toggle("Bars react to the music", isOn: $realAudio)
++                .onChange(of: realAudio) { _, isOn in
++                    if isOn && !SystemAudioAnalyzer.hasPermission {
++                        SystemAudioAnalyzer.requestPermission()
++                    }
++                    hasPermission = SystemAudioAnalyzer.hasPermission
++                }
++
++            if realAudio && !hasPermission {
++                HStack {
++                    Image(systemName: "exclamationmark.triangle.fill")
++                        .foregroundStyle(.yellow)
++                    Text("Needs Screen & System Audio Recording permission. After allowing it, restart Boring Notch.")
++                        .font(.caption)
++                    Spacer()
++                    Button("Open Settings") {
++                        SystemAudioAnalyzer.openPrivacySettings()
++                    }
++                }
++            }
++        } header: {
++            Text("Music visualizer")
++        } footer: {
++            Text("Off: the bars animate on their own. On: they follow the actual sound. macOS shows its recording indicator while the visualizer is listening.")
++                .foregroundStyle(.secondary)
++                .font(.caption)
++        }
++        .onAppear { hasPermission = SystemAudioAnalyzer.hasPermission }
++    }
++}
++
++struct PhotoBoothSettings: View {
++    @Default(.enablePhotoBooth) private var enabled
++    @Default(.photoBoothCountdown) private var countdown
++
++    var body: some View {
++        Form {
++            Section {
++                Defaults.Toggle(key: .enablePhotoBooth) {
++                    Text("Show Photo Booth tab")
++                }
++                Picker("Countdown", selection: $countdown) {
++                    Text("Off").tag(0)
++                    Text("3 seconds").tag(3)
++                    Text("5 seconds").tag(5)
++                    Text("10 seconds").tag(10)
++                }
++                .disabled(!enabled)
++                Defaults.Toggle(key: .photoBoothFlash) {
++                    Text("Flash when taking a photo")
++                }
++                .disabled(!enabled)
++                Defaults.Toggle(key: .photoBoothAddToShelf) {
++                    Text("Add new photos to the Shelf")
++                }
++                .disabled(!enabled)
++            } header: {
++                Text("Photo Booth")
++            } footer: {
++                Text("Photos are saved as JPEG in Pictures › Boring Notch Photos. The camera only runs while the Photo Booth tab is open.")
++                    .foregroundStyle(.secondary)
++                    .font(.caption)
++            }
++
++            Section {
++                KeyboardShortcuts.Recorder("Open Photo Booth:", name: .openPhotoBooth)
++                Button("Open Photos Folder") {
++                    let folder = PhotoBoothCamera.shared.photosFolder
++                    try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
++                    NSWorkspace.shared.open(folder)
++                }
++            }
++        }
++        .accentColor(.effectiveAccent)
++        .navigationTitle("Photo Booth")
++    }
++}
+diff --git a/boringNotch/features/MicrophoneManager.swift b/boringNotch/features/MicrophoneManager.swift
+new file mode 100644
+index 0000000..0ac5323
+--- /dev/null
++++ b/boringNotch/features/MicrophoneManager.swift
+@@ -0,0 +1,121 @@
++//
++//  MicrophoneManager.swift
++//  boringNotch
++//
++//  Mutes and unmutes the default input device through CoreAudio.
++//
++
++import CoreAudio
++import Foundation
++
++@MainActor
++final class MicrophoneManager {
++    static let shared = MicrophoneManager()
++
++    /// Input volume remembered when a device has no mute switch and we mute it by setting volume to 0.
++    private var volumeBeforeMute: [AudioObjectID: Float32] = [:]
++
++    private init() {}
++
++    // MARK: - Public
++
++    /// Whether the current default input device is muted (or at zero volume).
++    var isMuted: Bool {
++        let device = defaultInputDevice()
++        guard device != kAudioObjectUnknown else { return false }
++        if let muted = readMute(device) { return muted }
++        if let volume = readVolume(device) { return volume <= 0.001 }
++        return false
++    }
++
++    /// Toggles the microphone. Returns the new muted state, or nil if no input device could be changed.
++    @discardableResult
++    func toggle() -> Bool? {
++        let device = defaultInputDevice()
++        guard device != kAudioObjectUnknown else { return nil }
++
++        let shouldMute = !isMuted
++
++        // Prefer the device's own mute switch.
++        if isSettable(device, selector: kAudioDevicePropertyMute), writeMute(device, muted: shouldMute) {
++            return shouldMute
++        }
++
++        // Fall back to input volume (0 when muted, the remembered level when unmuted).
++        if isSettable(device, selector: kAudioDevicePropertyVolumeScalar) {
++            if shouldMute {
++                volumeBeforeMute[device] = readVolume(device) ?? 1.0
++                if writeVolume(device, 0) { return true }
++            } else {
++                let restored = max(volumeBeforeMute[device] ?? 0.75, 0.1)
++                if writeVolume(device, restored) { return false }
++            }
++        }
++
++        return nil
++    }
++
++    // MARK: - CoreAudio helpers
++
++    private func defaultInputDevice() -> AudioObjectID {
++        var deviceID = AudioObjectID(kAudioObjectUnknown)
++        var size = UInt32(MemoryLayout<AudioObjectID>.size)
++        var address = AudioObjectPropertyAddress(
++            mSelector: kAudioHardwarePropertyDefaultInputDevice,
++            mScope: kAudioObjectPropertyScopeGlobal,
++            mElement: kAudioObjectPropertyElementMain
++        )
++        let status = AudioObjectGetPropertyData(
++            AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &deviceID
++        )
++        return status == noErr ? deviceID : AudioObjectID(kAudioObjectUnknown)
++    }
++
++    private func inputAddress(_ selector: AudioObjectPropertySelector) -> AudioObjectPropertyAddress {
++        AudioObjectPropertyAddress(
++            mSelector: selector,
++            mScope: kAudioDevicePropertyScopeInput,
++            mElement: kAudioObjectPropertyElementMain
++        )
++    }
++
++    private func isSettable(_ device: AudioObjectID, selector: AudioObjectPropertySelector) -> Bool {
++        var address = inputAddress(selector)
++        guard AudioObjectHasProperty(device, &address) else { return false }
++        var settable: DarwinBoolean = false
++        let status = AudioObjectIsPropertySettable(device, &address, &settable)
++        return status == noErr && settable.boolValue
++    }
++
++    private func readMute(_ device: AudioObjectID) -> Bool? {
++        var address = inputAddress(kAudioDevicePropertyMute)
++        guard AudioObjectHasProperty(device, &address) else { return nil }
++        var value: UInt32 = 0
++        var size = UInt32(MemoryLayout<UInt32>.size)
++        let status = AudioObjectGetPropertyData(device, &address, 0, nil, &size, &value)
++        return status == noErr ? value != 0 : nil
++    }
++
++    private func writeMute(_ device: AudioObjectID, muted: Bool) -> Bool {
++        var address = inputAddress(kAudioDevicePropertyMute)
++        var value: UInt32 = muted ? 1 : 0
++        let size = UInt32(MemoryLayout<UInt32>.size)
++        return AudioObjectSetPropertyData(device, &address, 0, nil, size, &value) == noErr
++    }
++
++    private func readVolume(_ device: AudioObjectID) -> Float32? {
++        var address = inputAddress(kAudioDevicePropertyVolumeScalar)
++        guard AudioObjectHasProperty(device, &address) else { return nil }
++        var value: Float32 = 0
++        var size = UInt32(MemoryLayout<Float32>.size)
++        let status = AudioObjectGetPropertyData(device, &address, 0, nil, &size, &value)
++        return status == noErr ? value : nil
++    }
++
++    private func writeVolume(_ device: AudioObjectID, _ volume: Float32) -> Bool {
++        var address = inputAddress(kAudioDevicePropertyVolumeScalar)
++        var value = max(0, min(1, volume))
++        let size = UInt32(MemoryLayout<Float32>.size)
++        return AudioObjectSetPropertyData(device, &address, 0, nil, size, &value) == noErr
++    }
++}
+diff --git a/boringNotch/features/PhotoBoothCamera.swift b/boringNotch/features/PhotoBoothCamera.swift
+new file mode 100644
+index 0000000..dfa4399
+--- /dev/null
++++ b/boringNotch/features/PhotoBoothCamera.swift
+@@ -0,0 +1,463 @@
++//
++//  PhotoBoothCamera.swift
++//  boringNotch
++//
++//  Camera engine for the Photo Booth tab. Frames from AVCaptureVideoDataOutput
++//  go through Core Image (mirror, 4:3 crop, effect) and are published as a
++//  small preview image. Taking a photo renders the newest frame at full
++//  resolution and saves it as a JPEG in ~/Pictures/Boring Notch Photos.
++//
++//  Uses its own capture session so the Home tab's mirror is untouched.
++//
++
++import AppKit
++import AVFoundation
++import CoreImage
++import Darwin
++import ImageIO
++import UniformTypeIdentifiers
++
++enum PhotoBoothEffect: String, CaseIterable, Identifiable {
++    // Color looks
++    case normal, mono, noir, sepia, chrome, vintage, fade, glow, popArt, comic, thermal, xray
++    // Patterns
++    case pixelate, halftone
++    // Distortions
++    case mirror, kaleidoscope, lightTunnel, bulge, pinch, twirl
++
++    var id: String { rawValue }
++
++    var title: String {
++        switch self {
++        case .normal: return "Normal"
++        case .mono: return "Mono"
++        case .noir: return "Noir"
++        case .sepia: return "Sepia"
++        case .chrome: return "Chrome"
++        case .vintage: return "Vintage"
++        case .fade: return "Fade"
++        case .glow: return "Glow"
++        case .popArt: return "Pop Art"
++        case .comic: return "Comic"
++        case .thermal: return "Thermal"
++        case .xray: return "X-Ray"
++        case .pixelate: return "Pixelate"
++        case .halftone: return "Halftone"
++        case .mirror: return "Mirror"
++        case .kaleidoscope: return "Kaleidoscope"
++        case .lightTunnel: return "Light Tunnel"
++        case .bulge: return "Bulge"
++        case .pinch: return "Pinch"
++        case .twirl: return "Twirl"
++        }
++    }
++
++    /// Sizes are relative to the image, so the live preview (480 px wide) and the
++    /// saved photo (full resolution) look the same.
++    func apply(to input: CIImage) -> CIImage {
++        let extent = input.extent
++        let center = CIVector(x: extent.midX, y: extent.midY)
++        let radius = min(extent.width, extent.height) * 0.5
++
++        let filter: CIFilter?
++        switch self {
++        case .normal:
++            return input
++
++        // MARK: Color looks
++        case .mono:
++            filter = CIFilter(name: "CIPhotoEffectMono")
++        case .noir:
++            filter = CIFilter(name: "CIPhotoEffectNoir")
++        case .chrome:
++            filter = CIFilter(name: "CIPhotoEffectChrome")
++        case .vintage:
++            filter = CIFilter(name: "CIPhotoEffectTransfer")
++        case .fade:
++            filter = CIFilter(name: "CIPhotoEffectFade")
++        case .sepia:
++            filter = CIFilter(name: "CISepiaTone")
++            filter?.setValue(0.9, forKey: kCIInputIntensityKey)
++        case .glow:
++            // Blur reads past the edges, so extend the edge pixels first to avoid dark borders.
++            filter = CIFilter(name: "CIBloom")
++            filter?.setValue(input.clampedToExtent(), forKey: kCIInputImageKey)
++            filter?.setValue(extent.width / 40, forKey: kCIInputRadiusKey)
++            filter?.setValue(1.0, forKey: kCIInputIntensityKey)
++            return (filter?.outputImage ?? input).cropped(to: extent)
++        case .popArt:
++            return popArt(input)
++        case .comic:
++            filter = CIFilter(name: "CIComicEffect")
++        case .thermal:
++            filter = CIFilter(name: "CIThermal")
++        case .xray:
++            filter = CIFilter(name: "CIXRay")
++
++        // MARK: Patterns
++        case .pixelate:
++            filter = CIFilter(name: "CIPixellate")
++            filter?.setValue(center, forKey: kCIInputCenterKey)
++            filter?.setValue(max(4, extent.width / 48), forKey: kCIInputScaleKey)
++        case .halftone:
++            filter = CIFilter(name: "CIDotScreen")
++            filter?.setValue(center, forKey: kCIInputCenterKey)
++            filter?.setValue(0.0, forKey: kCIInputAngleKey)
++            filter?.setValue(max(3, extent.width / 80), forKey: kCIInputWidthKey)
++            filter?.setValue(0.7, forKey: kCIInputSharpnessKey)
++
++        // MARK: Distortions
++        case .mirror:
++            return mirror(input)
++        case .kaleidoscope:
++            filter = CIFilter(name: "CIKaleidoscope")
++            filter?.setValue(center, forKey: kCIInputCenterKey)
++            filter?.setValue(6, forKey: "inputCount")
++            filter?.setValue(0.0, forKey: kCIInputAngleKey)
++        case .lightTunnel:
++            filter = CIFilter(name: "CILightTunnel")
++            filter?.setValue(center, forKey: kCIInputCenterKey)
++            filter?.setValue(radius * 0.45, forKey: kCIInputRadiusKey)
++            filter?.setValue(2.0, forKey: "inputRotation")
++        case .bulge:
++            filter = CIFilter(name: "CIBumpDistortion")
++            filter?.setValue(center, forKey: kCIInputCenterKey)
++            filter?.setValue(radius, forKey: kCIInputRadiusKey)
++            filter?.setValue(0.6, forKey: kCIInputScaleKey)
++        case .pinch:
++            filter = CIFilter(name: "CIPinchDistortion")
++            filter?.setValue(center, forKey: kCIInputCenterKey)
++            filter?.setValue(radius, forKey: kCIInputRadiusKey)
++            filter?.setValue(0.6, forKey: kCIInputScaleKey)
++        case .twirl:
++            filter = CIFilter(name: "CITwirlDistortion")
++            filter?.setValue(center, forKey: kCIInputCenterKey)
++            filter?.setValue(radius, forKey: kCIInputRadiusKey)
++            filter?.setValue(2.5, forKey: kCIInputAngleKey)
++        }
++
++        guard let filter else { return input }
++        filter.setValue(input, forKey: kCIInputImageKey)
++        return (filter.outputImage ?? input).cropped(to: extent)
++    }
++
++    /// Bold, flat colors: boost saturation, then reduce to a few levels per channel.
++    private func popArt(_ input: CIImage) -> CIImage {
++        guard let saturate = CIFilter(name: "CIColorControls"),
++              let posterize = CIFilter(name: "CIColorPosterize") else { return input }
++        saturate.setValue(input, forKey: kCIInputImageKey)
++        saturate.setValue(1.8, forKey: kCIInputSaturationKey)
++        saturate.setValue(1.15, forKey: kCIInputContrastKey)
++        posterize.setValue(saturate.outputImage ?? input, forKey: kCIInputImageKey)
++        posterize.setValue(5, forKey: "inputLevels")
++        return (posterize.outputImage ?? input).cropped(to: input.extent)
++    }
++
++    /// Classic Photo Booth mirror: the left half, reflected onto the right.
++    private func mirror(_ input: CIImage) -> CIImage {
++        let extent = input.extent
++        let leftHalf = input.cropped(to: CGRect(x: extent.minX, y: extent.minY, width: extent.width / 2, height: extent.height))
++        // Reflect across the vertical center line: x' = 2·midX − x.
++        let reflect = CGAffineTransform(a: -1, b: 0, c: 0, d: 1, tx: 2 * extent.midX, ty: 0)
++        return leftHalf.transformed(by: reflect)
++            .composited(over: leftHalf)
++            .cropped(to: extent)
++    }
++}
++
++final class PhotoBoothCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSampleBufferDelegate {
++    static let shared = PhotoBoothCamera()
++
++    enum Status: Equatable {
++        case idle
++        case starting
++        case running
++        case needsPermission
++        case noCamera
++        case failed(String)
++    }
++
++    // Published on the main thread.
++    @Published private(set) var previewImage: CGImage?
++    @Published private(set) var status: Status = .idle
++    @Published private(set) var recentPhotos: [URL] = []
++    @Published var effect: PhotoBoothEffect = .normal {
++        didSet { setEffectForVideoQueue(effect) }
++    }
++
++    private let sessionQueue = DispatchQueue(label: "boringNotch.photoBooth.session")
++    private let videoQueue = DispatchQueue(label: "boringNotch.photoBooth.video", qos: .userInitiated)
++    private var session: AVCaptureSession?
++    private let ciContext = CIContext(options: [.cacheIntermediates: false])
++
++    // Shared between the video queue and other threads.
++    private let lock = NSLock()
++    private var latestPixelBuffer: CVPixelBuffer?
++    private var videoQueueEffect: PhotoBoothEffect = .normal
++    private var lastPreviewTime: CFTimeInterval = 0
++
++    private let previewMaxWidth: CGFloat = 480
++    private let previewInterval: CFTimeInterval = 1.0 / 30.0
++
++    /// ~/Pictures/Boring Notch Photos. Inside the sandbox FileManager's home is the app
++    /// container, so read the real home from the user database
++    /// (access comes from the com.apple.security.assets.pictures.read-write entitlement).
++    let photosFolder: URL = {
++        var home = FileManager.default.homeDirectoryForCurrentUser
++        if let pw = getpwuid(getuid()), let dir = pw.pointee.pw_dir {
++            home = URL(fileURLWithPath: String(cString: dir), isDirectory: true)
++        }
++        return home
++            .appendingPathComponent("Pictures", isDirectory: true)
++            .appendingPathComponent("Boring Notch Photos", isDirectory: true)
++    }()
++
++    private override init() {
++        super.init()
++        refreshRecentPhotos()
++    }
++
++    // MARK: - Session
++
++    func start() {
++        switch AVCaptureDevice.authorizationStatus(for: .video) {
++        case .authorized:
++            break
++        case .notDetermined:
++            setStatus(.starting)
++            AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
++                if granted {
++                    self?.start()
++                } else {
++                    self?.setStatus(.needsPermission)
++                }
++            }
++            return
++        default:
++            setStatus(.needsPermission)
++            return
++        }
++
++        setStatus(.starting)
++        sessionQueue.async { [weak self] in
++            guard let self else { return }
++            if let session = self.session {
++                if !session.isRunning { session.startRunning() }
++                self.setStatus(.running)
++                return
++            }
++
++            let devices = AVCaptureDevice.DiscoverySession(
++                deviceTypes: [.builtInWideAngleCamera, .external],
++                mediaType: .video,
++                position: .unspecified
++            ).devices
++            guard let device = devices.first else {
++                self.setStatus(.noCamera)
++                return
++            }
++
++            do {
++                let session = AVCaptureSession()
++                session.beginConfiguration()
++                session.sessionPreset = .high
++
++                let input = try AVCaptureDeviceInput(device: device)
++                guard session.canAddInput(input) else { throw CameraError.cannotAdd("input") }
++                session.addInput(input)
++
++                let output = AVCaptureVideoDataOutput()
++                output.alwaysDiscardsLateVideoFrames = true
++                output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
++                output.setSampleBufferDelegate(self, queue: self.videoQueue)
++                guard session.canAddOutput(output) else { throw CameraError.cannotAdd("output") }
++                session.addOutput(output)
++
++                session.commitConfiguration()
++                session.startRunning()
++                self.session = session
++                self.setStatus(.running)
++            } catch {
++                self.setStatus(.failed(error.localizedDescription))
++            }
++        }
++    }
++
++    func stop() {
++        sessionQueue.async { [weak self] in
++            guard let self else { return }
++            self.session?.stopRunning()
++            // Drop the session so the camera light turns off and the device is released.
++            self.session = nil
++            self.lock.lock()
++            self.latestPixelBuffer = nil
++            self.lock.unlock()
++            DispatchQueue.main.async {
++                self.previewImage = nil
++                if self.status == .running || self.status == .starting {
++                    self.status = .idle
++                }
++            }
++        }
++    }
++
++    private enum CameraError: LocalizedError {
++        case cannotAdd(String)
++        var errorDescription: String? {
++            switch self {
++            case .cannotAdd(let part): return "The camera \(part) could not be added."
++            }
++        }
++    }
++
++    private func setStatus(_ newStatus: Status) {
++        DispatchQueue.main.async { self.status = newStatus }
++    }
++
++    private func setEffectForVideoQueue(_ effect: PhotoBoothEffect) {
++        lock.lock()
++        videoQueueEffect = effect
++        lock.unlock()
++    }
++
++    // MARK: - Frames (video queue)
++
++    func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
++        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
++
++        lock.lock()
++        latestPixelBuffer = pixelBuffer
++        let effect = videoQueueEffect
++        lock.unlock()
++
++        let now = CACurrentMediaTime()
++        guard now - lastPreviewTime >= previewInterval else { return }
++        lastPreviewTime = now
++
++        let image = render(CIImage(cvPixelBuffer: pixelBuffer), effect: effect, maxWidth: previewMaxWidth)
++        guard let cgImage = ciContext.createCGImage(image, from: image.extent) else { return }
++        DispatchQueue.main.async { [weak self] in
++            self?.previewImage = cgImage
++        }
++    }
++
++    /// Mirror like a mirror, crop to 4:3, optionally downscale, then apply the effect.
++    private func render(_ source: CIImage, effect: PhotoBoothEffect, maxWidth: CGFloat?) -> CIImage {
++        var image = source.oriented(.upMirrored)
++
++        let extent = image.extent
++        let targetAspect: CGFloat = 4.0 / 3.0
++        var crop = extent
++        if extent.width / extent.height > targetAspect {
++            crop.size.width = extent.height * targetAspect
++            crop.origin.x = extent.midX - crop.width / 2
++        } else {
++            crop.size.height = extent.width / targetAspect
++            crop.origin.y = extent.midY - crop.height / 2
++        }
++        image = image.cropped(to: crop)
++            .transformed(by: CGAffineTransform(translationX: -crop.origin.x, y: -crop.origin.y))
++
++        if let maxWidth, image.extent.width > maxWidth {
++            let scale = maxWidth / image.extent.width
++            image = image.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
++        }
++
++        return effect.apply(to: image)
++    }
++
++    // MARK: - Taking photos
++
++    /// Renders the newest frame at full resolution and saves it. Returns the saved file.
++    func takePhoto() async -> URL? {
++        await withCheckedContinuation { continuation in
++            videoQueue.async { [weak self] in
++                guard let self else {
++                    continuation.resume(returning: nil)
++                    return
++                }
++                self.lock.lock()
++                let buffer = self.latestPixelBuffer
++                let effect = self.videoQueueEffect
++                self.lock.unlock()
++
++                guard let buffer else {
++                    continuation.resume(returning: nil)
++                    return
++                }
++                let image = self.render(CIImage(cvPixelBuffer: buffer), effect: effect, maxWidth: nil)
++                guard let cgImage = self.ciContext.createCGImage(image, from: image.extent) else {
++                    continuation.resume(returning: nil)
++                    return
++                }
++                let url = self.save(cgImage)
++                if url != nil {
++                    DispatchQueue.main.async { self.refreshRecentPhotos() }
++                }
++                continuation.resume(returning: url)
++            }
++        }
++    }
++
++    private func save(_ image: CGImage) -> URL? {
++        let fm = FileManager.default
++        do {
++            try fm.createDirectory(at: photosFolder, withIntermediateDirectories: true)
++        } catch {
++            print("PhotoBooth: could not create \(photosFolder.path): \(error.localizedDescription)")
++            return nil
++        }
++
++        let formatter = DateFormatter()
++        formatter.locale = Locale(identifier: "en_US_POSIX")
++        formatter.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
++        var url = photosFolder.appendingPathComponent("Photo \(formatter.string(from: Date())).jpg")
++        var counter = 2
++        while fm.fileExists(atPath: url.path) {
++            url = photosFolder.appendingPathComponent("Photo \(formatter.string(from: Date())) \(counter).jpg")
++            counter += 1
++        }
++
++        guard let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.jpeg.identifier as CFString, 1, nil) else {
++            return nil
++        }
++        let options: [CFString: Any] = [kCGImageDestinationLossyCompressionQuality: 0.92]
++        CGImageDestinationAddImage(destination, image, options as CFDictionary)
++        return CGImageDestinationFinalize(destination) ? url : nil
++    }
++
++    // MARK: - Recent photos
++
++    func refreshRecentPhotos() {
++        let folder = photosFolder
++        DispatchQueue.global(qos: .utility).async { [weak self] in
++            let urls = (try? FileManager.default.contentsOfDirectory(
++                at: folder,
++                includingPropertiesForKeys: [.contentModificationDateKey],
++                options: [.skipsHiddenFiles]
++            )) ?? []
++            let photos = urls
++                .filter { ["jpg", "jpeg", "png", "heic"].contains($0.pathExtension.lowercased()) }
++                .sorted { lhs, rhs in
++                    let l = (try? lhs.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
++                    let r = (try? rhs.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
++                    return l > r
++                }
++            DispatchQueue.main.async {
++                self?.recentPhotos = Array(photos.prefix(12))
++            }
++        }
++    }
++
++    /// Small thumbnail via ImageIO, without decoding the whole photo.
++    static func thumbnail(for url: URL, maxPixelSize: Int = 200) -> NSImage? {
++        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
++        let options: [CFString: Any] = [
++            kCGImageSourceCreateThumbnailFromImageAlways: true,
++            kCGImageSourceCreateThumbnailWithTransform: true,
++            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
++        ]
++        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
++        return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
++    }
++}
+diff --git a/boringNotch/features/PhotoBoothView.swift b/boringNotch/features/PhotoBoothView.swift
+new file mode 100644
+index 0000000..649808b
+--- /dev/null
++++ b/boringNotch/features/PhotoBoothView.swift
+@@ -0,0 +1,365 @@
++//
++//  PhotoBoothView.swift
++//  boringNotch
++//
++//  The Photo Booth tab: live preview with effects, countdown, flash,
++//  and the most recent photos. Photos go to ~/Pictures/Boring Notch Photos.
++//
++
++import AppKit
++import Defaults
++import SwiftUI
++
++struct PhotoBoothView: View {
++    @EnvironmentObject var vm: BoringViewModel
++    @ObservedObject private var camera = PhotoBoothCamera.shared
++    @Default(.photoBoothCountdown) private var countdownSetting
++
++    @State private var countdown: Int?
++    @State private var flash = false
++    @State private var isCapturing = false
++    @State private var captureTask: Task<Void, Never>?
++    @State private var message: String?
++
++    private let previewSize = CGSize(width: 184, height: 138)
++
++    var body: some View {
++        HStack(alignment: .top, spacing: 12) {
++            preview
++            controls
++            RecentPhotosGrid(photos: camera.recentPhotos)
++        }
++        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
++        .onAppear {
++            // The Home tab's mirror and this tab never show together; make sure the mirror lets go.
++            WebcamManager.shared.stopSession()
++            camera.refreshRecentPhotos()
++            camera.start()
++        }
++        .onDisappear {
++            captureTask?.cancel()
++            camera.stop()
++        }
++    }
++
++    // MARK: - Preview
++
++    private var preview: some View {
++        ZStack {
++            RoundedRectangle(cornerRadius: 12)
++                .fill(Color(white: 0.08))
++
++            if let image = camera.previewImage {
++                Image(decorative: image, scale: 1)
++                    .resizable()
++                    .aspectRatio(contentMode: .fill)
++            } else {
++                statusPlaceholder
++            }
++
++            if let countdown {
++                Text("\(countdown)")
++                    .font(.system(size: 64, weight: .bold, design: .rounded))
++                    .foregroundStyle(.white)
++                    .shadow(color: .black.opacity(0.6), radius: 8)
++                    .contentTransition(.numericText(countsDown: true))
++                    .transition(.scale.combined(with: .opacity))
++            }
++
++            if flash {
++                Color.white
++            }
++
++            if let message {
++                Text(message)
++                    .font(.system(size: 11, weight: .medium))
++                    .foregroundStyle(.white)
++                    .padding(.horizontal, 8)
++                    .padding(.vertical, 4)
++                    .background(Capsule().fill(.black.opacity(0.6)))
++                    .frame(maxHeight: .infinity, alignment: .bottom)
++                    .padding(.bottom, 6)
++                    .transition(.opacity)
++            }
++        }
++        .frame(width: previewSize.width, height: previewSize.height)
++        .clipShape(RoundedRectangle(cornerRadius: 12))
++        .contentShape(RoundedRectangle(cornerRadius: 12))
++        .onTapGesture { shoot() }
++        .help("Click or press the shutter to take a photo")
++    }
++
++    @ViewBuilder
++    private var statusPlaceholder: some View {
++        VStack(spacing: 6) {
++            switch camera.status {
++            case .needsPermission:
++                Image(systemName: "exclamationmark.triangle")
++                    .font(.system(size: 20))
++                    .foregroundStyle(.yellow)
++                Text("Camera access is off")
++                    .font(.caption)
++                    .foregroundStyle(.white)
++                Button("Open Settings") {
++                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera") {
++                        NSWorkspace.shared.open(url)
++                    }
++                }
++                .controlSize(.small)
++            case .noCamera:
++                Image(systemName: "video.slash")
++                    .font(.system(size: 20))
++                    .foregroundStyle(.gray)
++                Text("No camera found")
++                    .font(.caption)
++                    .foregroundStyle(.gray)
++            case .failed(let reason):
++                Image(systemName: "exclamationmark.triangle")
++                    .font(.system(size: 20))
++                    .foregroundStyle(.gray)
++                Text(reason)
++                    .font(.caption2)
++                    .foregroundStyle(.gray)
++                    .multilineTextAlignment(.center)
++                    .lineLimit(3)
++                    .padding(.horizontal, 8)
++            default:
++                ProgressView()
++                    .controlSize(.small)
++                Text("Starting camera…")
++                    .font(.caption)
++                    .foregroundStyle(.gray)
++            }
++        }
++    }
++
++    // MARK: - Controls
++
++    private var controls: some View {
++        VStack(alignment: .leading, spacing: 10) {
++            ScrollView(.horizontal, showsIndicators: false) {
++                LazyHGrid(rows: [GridItem(.fixed(24), spacing: 6), GridItem(.fixed(24), spacing: 6)], spacing: 6) {
++                    ForEach(PhotoBoothEffect.allCases) { effect in
++                        Button {
++                            camera.effect = effect
++                        } label: {
++                            Text(effect.title)
++                                .font(.system(size: 11, weight: .medium))
++                                .foregroundStyle(camera.effect == effect ? .black : .white)
++                                .padding(.horizontal, 10)
++                                .frame(height: 24)
++                                .background(
++                                    Capsule().fill(camera.effect == effect ? Color.white : Color.white.opacity(0.1))
++                                )
++                        }
++                        .buttonStyle(.plain)
++                    }
++                }
++            }
++            .frame(height: 54)
++
++            HStack(spacing: 14) {
++                Button {
++                    cycleCountdown()
++                } label: {
++                    HStack(spacing: 3) {
++                        Image(systemName: "timer")
++                        Text(countdownSetting == 0 ? "Off" : "\(countdownSetting)s")
++                            .monospacedDigit()
++                    }
++                    .font(.system(size: 11, weight: .medium))
++                    .foregroundStyle(countdownSetting == 0 ? .gray : .white)
++                    .frame(width: 52, height: 28)
++                    .background(Capsule().fill(Color.white.opacity(0.1)))
++                }
++                .buttonStyle(.plain)
++                .help("Countdown before the photo")
++
++                Button(action: shoot) {
++                    ZStack {
++                        Circle()
++                            .stroke(Color.white, lineWidth: 3)
++                            .frame(width: 50, height: 50)
++                        Circle()
++                            .fill(isCapturing ? Color.red : Color.white)
++                            .frame(width: 40, height: 40)
++                    }
++                }
++                .buttonStyle(.plain)
++                .disabled(camera.status != .running || isCapturing)
++                .opacity(camera.status == .running ? 1 : 0.4)
++                .help("Take a photo")
++
++                Button {
++                    NSWorkspace.shared.open(camera.photosFolder)
++                } label: {
++                    Image(systemName: "folder")
++                        .font(.system(size: 13, weight: .medium))
++                        .foregroundStyle(.white)
++                        .frame(width: 28, height: 28)
++                        .background(Circle().fill(Color.white.opacity(0.1)))
++                }
++                .buttonStyle(.plain)
++                .help("Open the Boring Notch Photos folder")
++            }
++        }
++        .frame(width: 220)
++    }
++
++    // MARK: - Actions
++
++    private func cycleCountdown() {
++        let options = [0, 3, 5, 10]
++        let index = options.firstIndex(of: countdownSetting) ?? 0
++        countdownSetting = options[(index + 1) % options.count]
++    }
++
++    private func shoot() {
++        guard !isCapturing, camera.status == .running else { return }
++        isCapturing = true
++        message = nil
++
++        // Keep the notch open through the countdown even if the pointer drifts away.
++        SharingStateManager.shared.beginInteraction()
++
++        captureTask = Task { @MainActor in
++            defer {
++                isCapturing = false
++                SharingStateManager.shared.endInteraction()
++            }
++
++            let seconds = Defaults[.photoBoothCountdown]
++            if seconds > 0 {
++                for n in stride(from: seconds, to: 0, by: -1) {
++                    withAnimation(.smooth(duration: 0.25)) { countdown = n }
++                    try? await Task.sleep(for: .seconds(1))
++                    if Task.isCancelled {
++                        countdown = nil
++                        return
++                    }
++                }
++                withAnimation(.smooth(duration: 0.2)) { countdown = nil }
++            }
++
++            PhotoBoothSound.playShutter()
++            if Defaults[.photoBoothFlash] {
++                flash = true
++            }
++
++            let saved = await camera.takePhoto()
++
++            withAnimation(.easeOut(duration: 0.45)) { flash = false }
++
++            if let saved {
++                if Defaults[.photoBoothAddToShelf], let bookmark = try? Bookmark(url: saved) {
++                    ShelfStateViewModel.shared.add([ShelfItem(kind: .file(bookmark: bookmark.data), isTemporary: false)])
++                    showMessage("Saved · added to Shelf")
++                } else {
++                    showMessage("Saved to Pictures")
++                }
++            } else {
++                showMessage("Couldn't save the photo")
++            }
++        }
++    }
++
++    private func showMessage(_ text: String) {
++        withAnimation(.smooth) { message = text }
++        Task { @MainActor in
++            try? await Task.sleep(for: .seconds(2))
++            if message == text {
++                withAnimation(.smooth) { message = nil }
++            }
++        }
++    }
++}
++
++// MARK: - Recent photos
++
++private struct RecentPhotosGrid: View {
++    let photos: [URL]
++
++    var body: some View {
++        if photos.isEmpty {
++            VStack(spacing: 4) {
++                Image(systemName: "photo.on.rectangle")
++                    .font(.system(size: 18))
++                    .foregroundStyle(.gray)
++                Text("Your photos\nappear here")
++                    .font(.caption2)
++                    .foregroundStyle(.gray)
++                    .multilineTextAlignment(.center)
++            }
++            .frame(maxWidth: .infinity, maxHeight: .infinity)
++        } else {
++            ScrollView(.vertical, showsIndicators: false) {
++                LazyVGrid(columns: [GridItem(.fixed(72), spacing: 6), GridItem(.fixed(72), spacing: 6)], spacing: 6) {
++                    ForEach(photos, id: \.self) { url in
++                        PhotoThumbnail(url: url)
++                    }
++                }
++            }
++            .frame(maxWidth: .infinity, alignment: .leading)
++        }
++    }
++}
++
++private struct PhotoThumbnail: View {
++    let url: URL
++    @State private var image: NSImage?
++
++    var body: some View {
++        ZStack {
++            RoundedRectangle(cornerRadius: 6)
++                .fill(Color.white.opacity(0.08))
++            if let image {
++                Image(nsImage: image)
++                    .resizable()
++                    .aspectRatio(contentMode: .fill)
++            }
++        }
++        .frame(width: 72, height: 54)
++        .clipShape(RoundedRectangle(cornerRadius: 6))
++        .contentShape(RoundedRectangle(cornerRadius: 6))
++        .onTapGesture { NSWorkspace.shared.open(url) }
++        .contextMenu {
++            Button("Open") { NSWorkspace.shared.open(url) }
++            Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
++            Button("Add to Shelf") {
++                if let bookmark = try? Bookmark(url: url) {
++                    ShelfStateViewModel.shared.add([ShelfItem(kind: .file(bookmark: bookmark.data), isTemporary: false)])
++                }
++            }
++        }
++        .onDrag { NSItemProvider(contentsOf: url) ?? NSItemProvider() }
++        .help(url.lastPathComponent)
++        .task(id: url) {
++            let target = url
++            image = await Task.detached(priority: .utility) {
++                PhotoBoothCamera.thumbnail(for: target, maxPixelSize: 160)
++            }.value
++        }
++    }
++}
++
++// MARK: - Sound
++
++enum PhotoBoothSound {
++    private static var player: NSSound?
++
++    static func playShutter() {
++        if player == nil {
++            let candidates = [
++                "/System/Library/Components/CoreAudio.component/Contents/SharedSupport/SystemSounds/system/Shutter.aif",
++                "/System/Library/Components/CoreAudio.component/Contents/SharedSupport/SystemSounds/system/Grab.aif",
++            ]
++            if let path = candidates.first(where: { FileManager.default.fileExists(atPath: $0) }) {
++                player = NSSound(contentsOfFile: path, byReference: true)
++            } else {
++                player = NSSound(named: NSSound.Name("Tink"))
++            }
++        }
++        player?.stop()
++        player?.play()
++    }
++}
+diff --git a/boringNotch/features/SystemAudioAnalyzer.swift b/boringNotch/features/SystemAudioAnalyzer.swift
+new file mode 100644
+index 0000000..83dafcc
+--- /dev/null
++++ b/boringNotch/features/SystemAudioAnalyzer.swift
+@@ -0,0 +1,228 @@
++//
++//  SystemAudioAnalyzer.swift
++//  boringNotch
++//
++//  Captures system audio with ScreenCaptureKit and turns it into four
++//  frequency-band levels (0...1) for the music visualizer.
++//  Requires Screen & System Audio Recording permission. While capture runs,
++//  macOS shows its screen-recording indicator in the menu bar.
++//
++
++import Accelerate
++import AppKit
++import CoreMedia
++import ScreenCaptureKit
++
++final class SystemAudioAnalyzer: NSObject, SCStreamOutput, SCStreamDelegate {
++    static let shared = SystemAudioAnalyzer()
++
++    static let bandCount = 4
++
++    // MARK: Permission
++
++    static var hasPermission: Bool { CGPreflightScreenCaptureAccess() }
++
++    /// Shows the system prompt (first time) or adds the app to the list in System Settings.
++    @discardableResult
++    static func requestPermission() -> Bool { CGRequestScreenCaptureAccess() }
++
++    static func openPrivacySettings() {
++        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
++            NSWorkspace.shared.open(url)
++        }
++    }
++
++    // MARK: State (main thread)
++
++    private var stream: SCStream?
++    private var isStarting = false
++    private var clients = 0
++    private var stopTask: Task<Void, Never>?
++
++    // MARK: Analysis (audio queue)
++
++    private let audioQueue = DispatchQueue(label: "boringNotch.systemAudioAnalyzer")
++    private let fftSize = 1024
++    private let sampleRate: Double = 48_000
++    private var fftSetup: vDSP_DFT_Setup?
++    private var window: [Float]
++    private var buffer: [Float] = []
++
++    /// Band edges in Hz: bass, low-mid, high-mid, treble.
++    private let bandEdges: [Double] = [40, 160, 600, 2_500, 10_000]
++
++    // Shared between the audio queue and the main thread.
++    private let lock = NSLock()
++    private var _levels = [Float](repeating: 0, count: SystemAudioAnalyzer.bandCount)
++    private var lastUpdate = Date.distantPast
++
++    private override init() {
++        let size = 1024
++        var hann = [Float](repeating: 0, count: size)
++        vDSP_hann_window(&hann, vDSP_Length(size), Int32(vDSP_HANN_NORM))
++        window = hann
++        fftSetup = vDSP_DFT_zrop_CreateSetup(nil, vDSP_Length(size), .FORWARD)
++        super.init()
++    }
++
++    deinit {
++        if let fftSetup { vDSP_DFT_DestroySetup(fftSetup) }
++    }
++
++    /// Latest band levels (0...1), or nil when nothing fresh has arrived for half a second.
++    func currentLevels() -> [Float]? {
++        lock.lock()
++        defer { lock.unlock() }
++        guard Date().timeIntervalSince(lastUpdate) < 0.5 else { return nil }
++        return _levels
++    }
++
++    // MARK: - Lifecycle (call on the main thread)
++
++    /// Each visualizer that wants real levels calls acquire(); capture runs while any hold it.
++    @MainActor
++    func acquire() {
++        clients += 1
++        stopTask?.cancel()
++        stopTask = nil
++        Task { @MainActor in await self.startIfNeeded() }
++    }
++
++    @MainActor
++    func release() {
++        clients = max(0, clients - 1)
++        guard clients == 0 else { return }
++        stopTask?.cancel()
++        // Short grace period so pausing and resuming quickly doesn't restart capture.
++        stopTask = Task { @MainActor in
++            try? await Task.sleep(for: .seconds(2))
++            guard !Task.isCancelled, self.clients == 0 else { return }
++            await self.stopCapture()
++        }
++    }
++
++    @MainActor
++    private func startIfNeeded() async {
++        guard stream == nil, !isStarting, clients > 0, Self.hasPermission else { return }
++        isStarting = true
++        defer { isStarting = false }
++
++        do {
++            let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
++            guard let display = content.displays.first else { return }
++
++            let filter = SCContentFilter(display: display, excludingApplications: [], exceptingWindows: [])
++            let config = SCStreamConfiguration()
++            config.capturesAudio = true
++            config.excludesCurrentProcessAudio = true
++            config.sampleRate = Int(sampleRate)
++            config.channelCount = 1
++            // Video can't be turned off, so ask for the smallest, slowest frames possible.
++            config.width = 2
++            config.height = 2
++            config.minimumFrameInterval = CMTime(value: 1, timescale: 1)
++            config.showsCursor = false
++
++            let newStream = SCStream(filter: filter, configuration: config, delegate: self)
++            try newStream.addStreamOutput(self, type: .audio, sampleHandlerQueue: audioQueue)
++            try newStream.addStreamOutput(self, type: .screen, sampleHandlerQueue: audioQueue)
++            try await newStream.startCapture()
++
++            // Released while we were starting.
++            if clients == 0 {
++                try? await newStream.stopCapture()
++                return
++            }
++            stream = newStream
++        } catch {
++            print("SystemAudioAnalyzer: could not start capture: \(error.localizedDescription)")
++        }
++    }
++
++    @MainActor
++    private func stopCapture() async {
++        guard let current = stream else { return }
++        stream = nil
++        try? await current.stopCapture()
++        audioQueue.async { [weak self] in self?.buffer.removeAll(keepingCapacity: true) }
++        lock.lock()
++        _levels = [Float](repeating: 0, count: Self.bandCount)
++        lock.unlock()
++    }
++
++    // MARK: - SCStreamDelegate
++
++    func stream(_ stream: SCStream, didStopWithError error: Error) {
++        print("SystemAudioAnalyzer: stream stopped: \(error.localizedDescription)")
++        Task { @MainActor in
++            if self.stream === stream { self.stream = nil }
++        }
++    }
++
++    // MARK: - SCStreamOutput (audio queue)
++
++    func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
++        guard type == .audio, sampleBuffer.isValid else { return }
++
++        try? sampleBuffer.withAudioBufferList { audioBufferList, _ in
++            // ScreenCaptureKit delivers 32-bit float PCM; with one channel there is one buffer.
++            guard let first = audioBufferList.first, let raw = first.mData else { return }
++            let count = Int(first.mDataByteSize) / MemoryLayout<Float>.size
++            let samples = UnsafeBufferPointer(start: raw.assumingMemoryBound(to: Float.self), count: count)
++            buffer.append(contentsOf: samples)
++        }
++
++        while buffer.count >= fftSize {
++            let frame = Array(buffer[0..<fftSize])
++            buffer.removeFirst(fftSize)
++            analyze(frame)
++        }
++    }
++
++    private func analyze(_ frame: [Float]) {
++        guard let fftSetup else { return }
++        let half = fftSize / 2
++
++        // Window the frame, then split into even/odd samples as the real-input DFT expects.
++        var windowed = [Float](repeating: 0, count: fftSize)
++        vDSP_vmul(frame, 1, window, 1, &windowed, 1, vDSP_Length(fftSize))
++
++        var evens = [Float](repeating: 0, count: half)
++        var odds = [Float](repeating: 0, count: half)
++        for i in 0..<half {
++            evens[i] = windowed[2 * i]
++            odds[i] = windowed[2 * i + 1]
++        }
++
++        var real = [Float](repeating: 0, count: half)
++        var imag = [Float](repeating: 0, count: half)
++        vDSP_DFT_Execute(fftSetup, evens, odds, &real, &imag)
++
++        // Magnitude per bin, scaled back to roughly 0...1 of full-scale amplitude.
++        let binWidth = sampleRate / Double(fftSize)
++        let scale = Float(1.0 / Double(fftSize))
++        var newLevels = [Float](repeating: 0, count: Self.bandCount)
++
++        for band in 0..<Self.bandCount {
++            let lo = max(1, Int(bandEdges[band] / binWidth))
++            let hi = min(half - 1, Int(bandEdges[band + 1] / binWidth))
++            guard hi > lo else { continue }
++            var peak: Float = 0
++            for bin in lo...hi {
++                let magnitude = sqrtf(real[bin] * real[bin] + imag[bin] * imag[bin]) * scale
++                peak = max(peak, magnitude)
++            }
++            // Map -60 dB...-6 dB onto 0...1.
++            let db = 20 * log10f(max(peak, 1e-7))
++            newLevels[band] = min(1, max(0, (db + 60) / 54))
++        }
++
++        lock.lock()
++        for i in 0..<Self.bandCount {
++            // Rise immediately, fall back gently.
++            _levels[i] = max(newLevels[i], _levels[i] * 0.82)
++        }
++        lastUpdate = Date()
++        lock.unlock()
++    }
++}
+diff --git a/boringNotch/models/Constants.swift b/boringNotch/models/Constants.swift
+index 8477434..8981805 100644
+--- a/boringNotch/models/Constants.swift
++++ b/boringNotch/models/Constants.swift
+@@ -170,6 +170,20 @@ extension Defaults.Keys {
+     static let copyOnDrag = Key<Bool>("copyOnDrag", default: false)
+     static let autoRemoveShelfItems = Key<Bool>("autoRemoveShelfItems", default: false)
+     static let expandedDragDetection = Key<Bool>("expandedDragDetection", default: true)
++
++    // MARK: Clipboard history
++    static let enableClipboardHistory = Key<Bool>("enableClipboardHistory", default: true)
++    static let clipboardHistoryLimit = Key<Int>("clipboardHistoryLimit", default: 20)
++    static let clipboardIncludeImages = Key<Bool>("clipboardIncludeImages", default: true)
++
++    // MARK: Photo Booth
++    static let enablePhotoBooth = Key<Bool>("enablePhotoBooth", default: true)
++    static let photoBoothCountdown = Key<Int>("photoBoothCountdown", default: 3)
++    static let photoBoothFlash = Key<Bool>("photoBoothFlash", default: true)
++    static let photoBoothAddToShelf = Key<Bool>("photoBoothAddToShelf", default: false)
++
++    // MARK: Audio visualizer
++    static let realAudioVisualizer = Key<Bool>("realAudioVisualizer", default: false)
+     
+     // MARK: Calendar
+     static let calendarSelectionState = Key<CalendarSelectionState>("calendarSelectionState", default: .all)

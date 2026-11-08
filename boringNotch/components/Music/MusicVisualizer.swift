@@ -6,6 +6,7 @@
 //
 import AppKit
 import Cocoa
+import Defaults
 import SwiftUI
 
 class AudioSpectrum: NSView {
@@ -13,6 +14,11 @@ class AudioSpectrum: NSView {
     private var barScales: [CGFloat] = []
     private var isPlaying: Bool = true
     private var animationTimer: Timer?
+    /// True while the bars follow real system audio instead of random heights.
+    private var usesRealAudio = false
+    private var holdsAnalyzer = false
+    /// The setting's value when animation last started, to notice changes cheaply.
+    private var realAudioSetting = false
     
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -56,27 +62,62 @@ class AudioSpectrum: NSView {
     
     private func startAnimating() {
         guard animationTimer == nil else { return }
-        animationTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
+        realAudioSetting = Defaults[.realAudioVisualizer]
+        usesRealAudio = realAudioSetting && SystemAudioAnalyzer.hasPermission
+        if usesRealAudio && !holdsAnalyzer {
+            SystemAudioAnalyzer.shared.acquire()
+            holdsAnalyzer = true
+        }
+        let interval: TimeInterval = usesRealAudio ? 1.0 / 30.0 : 0.3
+        animationTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             self?.updateBars()
         }
     }
-    
+
     private func stopAnimating() {
         animationTimer?.invalidate()
         animationTimer = nil
+        if holdsAnalyzer {
+            SystemAudioAnalyzer.shared.release()
+            holdsAnalyzer = false
+        }
         resetBars()
     }
-    
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window == nil {
+            stopAnimating()
+        } else if isPlaying {
+            startAnimating()
+        }
+    }
+
     private func updateBars() {
+        // Follow the setting if it was changed while playing.
+        if Defaults[.realAudioVisualizer] != realAudioSetting {
+            stopAnimating()
+            startAnimating()
+            return
+        }
+
+        let realLevels = usesRealAudio ? SystemAudioAnalyzer.shared.currentLevels() : nil
+        let isReal = realLevels?.count == barLayers.count
+
         for (i, barLayer) in barLayers.enumerated() {
             let currentScale = barScales[i]
-            let targetScale = CGFloat.random(in: 0.35 ... 1.0)
+            let targetScale: CGFloat
+            if isReal, let levels = realLevels {
+                targetScale = 0.35 + 0.65 * CGFloat(levels[i])
+            } else {
+                targetScale = CGFloat.random(in: 0.35 ... 1.0)
+            }
             barScales[i] = targetScale
             let animation = CABasicAnimation(keyPath: "transform.scale.y")
             animation.fromValue = currentScale
             animation.toValue = targetScale
-            animation.duration = 0.3
-            animation.autoreverses = true
+            animation.duration = isReal ? 1.0 / 30.0 : 0.3
+            animation.autoreverses = !isReal
             animation.fillMode = .forwards
             animation.isRemovedOnCompletion = false
             if #available(macOS 13.0, *) {

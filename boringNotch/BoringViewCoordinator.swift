@@ -210,7 +210,8 @@ class BoringViewCoordinator: ObservableObject {
         icon: String = ""
     ) {
         sneakPeekDuration = duration
-        if type != .music {
+        // Mic toggles come from an explicit shortcut, so show them even without HUD replacement.
+        if type != .music && type != .mic {
             // close()
             if !Defaults[.hudReplacement] {
                 return

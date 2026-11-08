@@ -170,6 +170,20 @@ extension Defaults.Keys {
     static let copyOnDrag = Key<Bool>("copyOnDrag", default: false)
     static let autoRemoveShelfItems = Key<Bool>("autoRemoveShelfItems", default: false)
     static let expandedDragDetection = Key<Bool>("expandedDragDetection", default: true)
+
+    // MARK: Clipboard history
+    static let enableClipboardHistory = Key<Bool>("enableClipboardHistory", default: true)
+    static let clipboardHistoryLimit = Key<Int>("clipboardHistoryLimit", default: 20)
+    static let clipboardIncludeImages = Key<Bool>("clipboardIncludeImages", default: true)
+
+    // MARK: Photo Booth
+    static let enablePhotoBooth = Key<Bool>("enablePhotoBooth", default: true)
+    static let photoBoothCountdown = Key<Int>("photoBoothCountdown", default: 3)
+    static let photoBoothFlash = Key<Bool>("photoBoothFlash", default: true)
+    static let photoBoothAddToShelf = Key<Bool>("photoBoothAddToShelf", default: false)
+
+    // MARK: Audio visualizer
+    static let realAudioVisualizer = Key<Bool>("realAudioVisualizer", default: false)
     
     // MARK: Calendar
     static let calendarSelectionState = Key<CalendarSelectionState>("calendarSelectionState", default: .all)
