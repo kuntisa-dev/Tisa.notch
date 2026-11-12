@@ -6,12 +6,12 @@ Tisa Dynamic Island is a personal fork of [Boring Notch](https://github.com/TheB
 
 ## Download and install on Windows
 
-**Windows 11 x64 desktops and laptops:** [Download Windows v0.3.1](https://github.com/kuntisa-dev/Tisa.notch/releases/tag/windows-v0.3.1).
+**Windows 11 x64 desktops and laptops:** [Download Windows v0.3.2](https://github.com/kuntisa-dev/Tisa.notch/releases/tag/windows-v0.3.2).
 This is an early development build. Native Windows acceptance testing is still pending,
 and it does not yet include every Mac feature.
 
 1. Open the release link and expand **Assets**.
-2. Download **TisaDynamicIsland-windows-x64-0.3.1.zip**. Choose the Windows ZIP;
+2. Download **TisaDynamicIsland-windows-x64-0.3.2.zip**. Choose the Windows ZIP;
    the automatically generated **Source code** downloads contain source, not the runnable app.
 3. Right-click the ZIP in File Explorer → **Extract All**. Keep the entire extracted folder.
 4. Open the extracted folder and double-click **TisaDynamicIsland.exe**.

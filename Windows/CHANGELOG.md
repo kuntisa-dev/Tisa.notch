@@ -1,3 +1,12 @@
+# Windows 0.3.2
+
+- Fixed clipped/blank tab labels discovered when reviewing screenshots from a real Windows runner.
+- Navigation now uses the measured inner viewport width and reserves sufficient height for its scrollbar.
+- Native smoke checks fail if navigation labels have no visible content area or a standard-width layout scrolls unnecessarily.
+- Public release downloads no longer require repository collaborator access.
+- The Windows-hosted regression suite, self-contained publish and native UI/placement smoke checks passed in [run 43203371471](https://github.com/kuntisa-dev/Tisa.notch/actions/runs/43203371471). Normal, narrow, wide and Settings screenshots were reviewed.
+- Real-device provider, mixed-DPI and full-screen acceptance checks remain pending; this is still a development preview.
+
 # Windows 0.3.1
 
 - Fixed hotkey reopening of an island hidden while expanded.
