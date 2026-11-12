@@ -57,3 +57,10 @@ build/
 # Python caches
 __pycache__/
 *.py[cod]
+
+# Windows / .NET
+**/bin/
+**/obj/
+Windows/artifacts/
+*.user
+*.suo

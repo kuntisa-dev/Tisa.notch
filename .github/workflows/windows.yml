@@ -1,0 +1,46 @@
+name: Build Windows
+on:
+  push:
+    branches: [main, feature/windows-port]
+    paths: ['Windows/**', '.github/workflows/windows.yml']
+  pull_request:
+    paths: ['Windows/**', '.github/workflows/windows.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Test download recognition
+        run: dotnet run --project Windows/TisaDynamicIsland.Tests -c Release
+      - name: Build portable Windows app
+        run: dotnet publish Windows/TisaDynamicIsland -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o artifacts/windows-x64
+      - name: Exercise native window and render all pages
+        shell: pwsh
+        run: |
+          $app = Start-Process -FilePath artifacts/windows-x64/TisaDynamicIsland.exe -ArgumentList '--smoke-test', 'artifacts/smoke' -PassThru
+          if (-not $app.WaitForExit(60000)) {
+            $app.Kill()
+            throw 'Windows UI smoke test timed out.'
+          }
+          if (Test-Path artifacts/smoke/result.txt) { Get-Content artifacts/smoke/result.txt }
+          if ($app.ExitCode -ne 0 -or -not (Test-Path artifacts/smoke/result.txt)) { throw 'Windows UI smoke test failed.' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Windows-UI-verification
+          path: artifacts/smoke/
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TisaDynamicIsland-windows-x64
+          path: artifacts/windows-x64/
+          if-no-files-found: error
