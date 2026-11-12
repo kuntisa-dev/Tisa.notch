@@ -11,12 +11,47 @@ The Swift app remains in the repository and builds independently.
 - For development: the .NET 10 SDK (or Visual Studio with .NET desktop development).
 - The self-contained published build includes its runtime.
 
-## Download a development build
+## Download and install
 
-On GitHub, open **Actions → Build Windows**, select a successful run on
-`feature/windows-port`, then download **TisaDynamicIsland-windows-x64** from Artifacts.
-Unzip the entire folder and run `TisaDynamicIsland.exe`. Access requires permission
-to this private repository. These are unsigned development artifacts, not installers.
+1. On your Windows PC, open [Windows v0.3.1 on GitHub Releases](https://github.com/kuntisa-dev/Tisa.notch/releases/tag/windows-v0.3.1).
+   Sign in to a GitHub account that has access to this private repository.
+2. Under **Assets**, download **TisaDynamicIsland-windows-x64-0.3.1.zip**.
+   The **Source code** ZIP and tarball are for developers; they are not the app download.
+3. In File Explorer, right-click the Windows ZIP and choose **Extract All**.
+   Do not launch the app from inside the ZIP. Keep all extracted files together in a folder
+   where you want to keep the app, such as a folder under Documents.
+4. Open that extracted folder and double-click **TisaDynamicIsland.exe**.
+   There is no setup wizard: this is a portable app. No administrator rights, Xcode,
+   Visual Studio, .NET SDK or separate .NET runtime installation is required.
+5. The island appears near the top of the screen. Hover or press **Ctrl + Alt + Space**
+   to expand it. Open **Settings → Desktop & displays** to choose your display and layout.
+   Clipboard recording starts only after you enable it in Settings.
+
+You may create a desktop shortcut to the extracted executable. Keep the actual app folder
+in place when using that shortcut. The app does not currently start automatically with Windows.
+
+This is an unsigned development prerelease, and native Windows acceptance checks remain
+pending. Camera, calendar/routines, AI usage and fan control are not included yet.
+
+### Update, quit and remove
+
+- **Quit:** right-click the Tisa tray icon near the clock and choose **Quit**.
+  The **Hide to tray** button keeps the app running.
+- **Update:** quit the old app, extract the newer Windows ZIP into a new folder, and run
+  the new executable. Your saved preferences are separate from the portable app folder.
+- **Remove:** quit, then delete the extracted app folder and any shortcut you created.
+  To remove saved preferences too, delete `%LOCALAPPDATA%\TisaDynamicIsland`.
+  App-generated test results remain in the `Tisa-Windows-Test-*` folders on your Desktop;
+  you can delete those separately. Original files referenced by the shelf are unaffected.
+
+### If you cannot find or open it
+
+- A GitHub **404** for the private release usually means your signed-in account lacks repository access.
+- If another instance is running, launching again brings that existing island back. Check the tray icon.
+- If the shortcut is unavailable, use the tray menu to open the island; Settings explains shortcut conflicts.
+- This package targets Windows 11 **x64**, not ARM64, macOS or Linux.
+- For crashes or missing UI, quit any existing instance and run **Test-Windows.cmd** from the extracted folder.
+  Review the results before sharing `result.txt`, screenshots or the results ZIP.
 
 ## Build on Windows
 

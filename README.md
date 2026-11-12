@@ -4,6 +4,32 @@
 
 Tisa Dynamic Island is a personal fork of [Boring Notch](https://github.com/TheBoredTeam/boring.notch) by TheBoredTeam, with extra features and a Liquid Glass look.
 
+## Download and install on Windows
+
+**Windows 11 x64 desktops and laptops:** [Download Windows v0.3.1](https://github.com/kuntisa-dev/Tisa.notch/releases/tag/windows-v0.3.1).
+This is an early development build. Native Windows acceptance testing is still pending,
+and it does not yet include every Mac feature.
+
+1. Open the release link and expand **Assets**.
+2. Download **TisaDynamicIsland-windows-x64-0.3.1.zip**. Choose the Windows ZIP;
+   the automatically generated **Source code** downloads contain source, not the runnable app.
+3. Right-click the ZIP in File Explorer → **Extract All**. Keep the entire extracted folder.
+4. Open the extracted folder and double-click **TisaDynamicIsland.exe**.
+   No Xcode, Visual Studio, .NET SDK or separate .NET runtime installation is required.
+5. The island appears near the top of your display. Press **Ctrl + Alt + Space** to open it,
+   or use its tray icon. Choose your monitor and layout in **Settings → Desktop & displays**.
+
+To test this development build, quit the app from its tray menu, then double-click
+**Test-Windows.cmd** in the same extracted folder. It creates local results on your Desktop
+and uploads nothing. See [the full Windows guide](Windows/README.md) for features, updates,
+uninstallation and the manual test checklist.
+
+This repository is private. Downloads require a GitHub account with access to the repository.
+
+## Mac version
+
+The existing Mac app and its Xcode build instructions are below. The Windows ZIP runs only on Windows.
+
 ## Features
 
 From Boring Notch:
