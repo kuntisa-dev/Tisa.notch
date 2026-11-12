@@ -222,6 +222,21 @@ public partial class MainWindow : Window
             using var file = File.Create(Path.Combine(output, tab + ".png"));
             encoder.Save(file);
         }
+        // Check that availability notes remain reachable inside the compact settings page.
+        ShowPage("Settings");
+        FeatureAvailability.IsExpanded = true;
+        UpdateLayout();
+        SettingsPage.ScrollToBottom();
+        UpdateLayout();
+        if (SettingsPage.ScrollableHeight <= 0 || SettingsPage.VerticalOffset <= 0)
+            throw new InvalidOperationException("Feature availability notes must be scrollable in Settings.");
+        var supportDpi = VisualTreeHelper.GetDpi(this);
+        var supportBitmap = new RenderTargetBitmap((int)(ActualWidth * supportDpi.DpiScaleX),
+            (int)(ActualHeight * supportDpi.DpiScaleY), supportDpi.PixelsPerInchX, supportDpi.PixelsPerInchY, PixelFormats.Pbgra32);
+        supportBitmap.Render(this);
+        var supportEncoder = new PngBitmapEncoder();
+        supportEncoder.Frames.Add(BitmapFrame.Create(supportBitmap));
+        using (var supportFile = File.Create(Path.Combine(output, "FeatureAvailability.png"))) supportEncoder.Save(supportFile);
         SetExpanded(false);
         if (Height != 64) throw new InvalidOperationException("Collapse failed after navigation.");
     }

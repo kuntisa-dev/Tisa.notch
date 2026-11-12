@@ -49,6 +49,15 @@ The first layout anchors to the primary monitor's work area. Selecting a monitor
 full-screen behavior, richer animations and editable Home widgets are still pending.
 Camera, microphones and fan hardware are not accessed by this build.
 
+### Feature availability
+
+Settings → **Feature availability on Windows** explains the platform differences.
+Unavailable features are omitted from the tabs and switches. The notes distinguish
+macOS-only integrations (AirDrop, Apple's Liquid Glass material and Apple SMC control)
+from features not yet ported to Windows, such as Photo Booth, Khmer calendar/routines
+and AI usage. PC fan controls remain hidden until a supported hardware integration
+is available; PC fans are not described as a macOS-only feature.
+
 ## Validation
 
 Download-file classification tests can run on macOS or Windows:

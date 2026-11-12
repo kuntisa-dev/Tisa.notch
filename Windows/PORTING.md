@@ -1,6 +1,9 @@
 # Full feature parity tracker
 
 Goal: reproduce the Mac experience on Windows 11, using Windows system services.
+User-approved platform policy: omit unavailable controls from the Windows interface
+and explain differences in Settings. Mark only Apple-specific integrations as macOS-only;
+features awaiting a Windows port are not yet available, and PC fan support depends on hardware.
 `Implemented` means source exists, not that it has passed real-device acceptance.
 Features marked pending are not exposed as working buttons or simulated data.
 
