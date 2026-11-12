@@ -1,0 +1,19 @@
+{
+  "id": "web_hero_city_night",
+  "name": "Web Hero City Night",
+  "canvas": {
+    "width": 1086,
+    "height": 1448
+  },
+  "coordinateSystem": "top-left origin, pixels",
+  "slots": [
+    { "index": 1, "x": 164, "y": 322, "width": 362, "height": 361, "cornerRadius": 24 },
+    { "index": 2, "x": 560, "y": 321, "width": 360, "height": 362, "cornerRadius": 24 },
+    { "index": 3, "x": 164, "y": 716, "width": 362, "height": 362, "cornerRadius": 24 },
+    { "index": 4, "x": 560, "y": 716, "width": 360, "height": 362, "cornerRadius": 24 }
+  ],
+  "assetFiles": {
+    "original": "webhero_original.png"
+  },
+  "notes": "Artwork only, no overlay file: the gray placeholder cards are cut out of the poster when the template loads. Slot rects measured from the gray cards."
+}

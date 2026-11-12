@@ -1,0 +1,37 @@
+{
+  "canvas": {
+    "width": 1086,
+    "height": 1448
+  },
+  "slots": [
+    {
+      "x": 187,
+      "y": 315,
+      "width": 343,
+      "height": 361,
+      "cornerRadius": 12
+    },
+    {
+      "x": 557,
+      "y": 315,
+      "width": 343,
+      "height": 361,
+      "cornerRadius": 12
+    },
+    {
+      "x": 187,
+      "y": 713,
+      "width": 343,
+      "height": 363,
+      "cornerRadius": 12
+    },
+    {
+      "x": 557,
+      "y": 713,
+      "width": 343,
+      "height": 363,
+      "cornerRadius": 12
+    }
+  ],
+  "compositing": "Render photos aspect-fill into slots, then draw ronaldo_frame_overlay.png over the full canvas at original aspect ratio. Export 1086x1448 or scaled proportionally."
+}
