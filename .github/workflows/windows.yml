@@ -38,13 +38,13 @@ jobs:
           }
           if (Test-Path artifacts/smoke/result.txt) { Get-Content artifacts/smoke/result.txt }
           if ($app.ExitCode -ne 0 -or -not (Test-Path artifacts/smoke/result.txt)) { throw 'Windows UI smoke test failed.' }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: Windows-UI-verification
           path: artifacts/smoke/
           if-no-files-found: ignore
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: TisaDynamicIsland-windows-x64
           path: artifacts/windows-x64/
