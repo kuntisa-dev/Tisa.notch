@@ -1,3 +1,20 @@
+# Windows 0.3.0
+
+## Desktop and monitor support
+
+- Saved monitor selection with a primary-display fallback when the selected monitor disconnects.
+- Window placement uses physical screen coordinates and the target window's DPI, including negative monitor origins.
+- Optional 960 × 460 workspace for large desktop monitors, with work-area bounds respected.
+- Floating rounded island below the top edge, or an attached top-edge style.
+- Hide over full-screen foreground apps on the selected monitor, with a short grace period for manual reopening.
+- Hiding to tray stays hidden; restoring after full-screen use doesn't request keyboard focus.
+- Battery label omitted on PCs reporting no battery, plus a shortcut to Windows Display settings.
+- 240 automated placement combinations cover DPI, taskbars, portrait/short work areas, negative coordinates and ultrawide displays.
+
+Builds and portable regression checks pass locally. The native multi-monitor/full-screen
+paths and updated UI have not been verified on a Windows device. GitHub Actions is still
+blocked by the account billing/spending-limit error; this remains a development build.
+
 # Windows 0.2.0
 
 ## Interface

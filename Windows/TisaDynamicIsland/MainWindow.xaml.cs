@@ -29,6 +29,8 @@ public partial class MainWindow : Window
     private IntPtr handle;
     private bool refreshing, expanded, pinned, quitting;
     private bool sessionLocked;
+    private bool refreshingDisplays, userHidden, hiddenForFullscreen, positioning;
+    private DateTime fullscreenGraceUntil;
     private Point shelfDragOrigin;
     private ShelfEntry? shelfDragEntry;
     private string selectedPage = "Home";
@@ -45,11 +47,15 @@ public partial class MainWindow : Window
         ClipboardToggle.IsChecked = settings.ClipboardEnabled;
         DownloadsToggle.IsChecked = settings.DownloadsEnabled;
         HoverToggle.IsChecked = settings.ExpandOnHover;
+        WideToggle.IsChecked = settings.WideLayout;
+        FloatingToggle.IsChecked = settings.FloatingIsland;
+        FullscreenToggle.IsChecked = settings.HideForFullscreen;
+        RefreshDisplayChoices();
         UpdateClipboardHint();
         UpdateEmptyStates();
         SourceInitialized += (_, _) => InitializeNative();
         Loaded += async (_, _) => { SetExpanded(false); PositionIsland(); await RefreshAsync(); };
-        timer.Tick += async (_, _) => await RefreshAsync();
+        timer.Tick += async (_, _) => { UpdateFullscreenVisibility(); await RefreshAsync(); };
         timer.Start();
         collapseTimer.Tick += (_, _) =>
         {
@@ -58,7 +64,7 @@ public partial class MainWindow : Window
         };
         SystemEvents.DisplaySettingsChanged += DisplayChanged;
         SystemEvents.SessionSwitch += SessionChanged;
-        Closing += (_, e) => { if (!quitting) { e.Cancel = true; Hide(); } };
+        Closing += (_, e) => { if (!quitting) { e.Cancel = true; HideToTray(this, new RoutedEventArgs()); } };
     }
 
     private void InitializeNative()
@@ -73,36 +79,80 @@ public partial class MainWindow : Window
             Status.Text = "Shortcut unavailable · use the tray icon to open";
         }
         var menu = new Forms.ContextMenuStrip();
-        menu.Items.Add("Show island", null, (_, _) => Dispatcher.Invoke(() => { Show(); Activate(); pinned = true; SetExpanded(true); }));
-        menu.Items.Add("Settings", null, (_, _) => Dispatcher.Invoke(() => { Show(); pinned = true; ShowPage("Settings"); }));
+        menu.Items.Add("Show island", null, (_, _) => Dispatcher.Invoke(() => { RevealIsland(); Activate(); pinned = true; SetExpanded(true); }));
+        menu.Items.Add("Settings", null, (_, _) => Dispatcher.Invoke(() => { RevealIsland(); Activate(); pinned = true; ShowPage("Settings"); }));
         menu.Items.Add("Quit", null, (_, _) => Dispatcher.Invoke(Quit));
         tray = new Forms.NotifyIcon { Text = "Tisa Dynamic Island", Icon = System.Drawing.SystemIcons.Application, Visible = true, ContextMenuStrip = menu };
-        tray.DoubleClick += (_, _) => Dispatcher.Invoke(() => { Show(); Activate(); pinned = true; SetExpanded(true); });
+        tray.DoubleClick += (_, _) => Dispatcher.Invoke(() => { RevealIsland(); Activate(); pinned = true; SetExpanded(true); });
     }
 
     private IntPtr WindowMessage(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         if (NativeMethods.ShowIslandMessage != 0 && (uint)message == NativeMethods.ShowIslandMessage)
         {
-            Show(); pinned = true; SetExpanded(true); Activate(); handled = true;
+            RevealIsland(); pinned = true; SetExpanded(true); Activate(); handled = true;
         }
+        // Let WPF handle DPI changes, then reapply placement using the updated window DPI.
+        if (message is 0x02E0 or 0x001A) Dispatcher.BeginInvoke(PositionIsland);
         if (message == NativeMethods.ClipboardUpdate && settings.ClipboardEnabled && !sessionLocked) clipboard.Capture(hwnd);
         if (message == NativeMethods.Hotkey && wParam.ToInt32() == 1)
         {
-            Show(); pinned = !expanded; SetExpanded(!expanded); Activate(); handled = true;
+            RevealIsland(); pinned = !expanded; SetExpanded(!expanded); Activate(); handled = true;
         }
         return IntPtr.Zero;
     }
 
     private void PositionIsland()
     {
-        // WPF work-area values are in device-independent units, including taskbar insets.
-        var area = SystemParameters.WorkArea;
-        Width = Math.Min(expanded ? 800 : 420, area.Width - 24);
-        Left = area.Left + (area.Width - Width) / 2;
-        Top = area.Top;
+        if (handle == IntPtr.Zero || positioning || quitting) return;
+        positioning = true;
+        try
+        {
+            var placement = DesktopService.Place(handle, settings, expanded);
+            Width = placement.LogicalWidth;
+            Height = placement.LogicalHeight;
+            PageArea.Height = Math.Max(80, (settings.WideLayout ? 460 : ExpandedHeight) - 170);
+            // Constrain the content as well as the HWND on short work areas.
+            if (expanded) PageArea.Height = Math.Max(40, Height - 170);
+            Island.CornerRadius = settings.FloatingIsland ? new CornerRadius(24) : new CornerRadius(0, 0, 26, 26);
+            if (!NativeMethods.SetWindowPos(handle, IntPtr.Zero, placement.Left, placement.Top, placement.Width, placement.Height, 0x0014))
+                Status.Text = "Couldn't position the island. Choose a display in Settings to try again.";
+        }
+        finally { positioning = false; }
     }
-    private void DisplayChanged(object? sender, EventArgs e) => Dispatcher.BeginInvoke(PositionIsland);
+    private void DisplayChanged(object? sender, EventArgs e) => Dispatcher.BeginInvoke(() => { RefreshDisplayChoices(); PositionIsland(); });
+    private void RefreshDisplayChoices()
+    {
+        refreshingDisplays = true;
+        try
+        {
+            var displays = DesktopService.Displays();
+            var available = displays.Any(display => display.DeviceName == settings.DisplayDevice);
+            DisplaySelector.ItemsSource = available ? displays : displays.Append(new DisplayChoice(settings.DisplayDevice, "Saved display (disconnected) — using primary")).ToArray();
+            DisplaySelector.SelectedValue = settings.DisplayDevice;
+            DisplayHint.Text = available ? "The island follows the taskbar work area and display scaling." : "Saved display disconnected. Using the primary display until it reconnects.";
+        }
+        finally { refreshingDisplays = false; }
+    }
+    private void SelectDisplay(object sender, SelectionChangedEventArgs e)
+    {
+        if (refreshingDisplays || !IsLoaded || DisplaySelector.SelectedValue is not string device) return;
+        settings.DisplayDevice = device;
+        SavePreferences(); PositionIsland(); RefreshDisplayChoices();
+    }
+    private void RevealIsland()
+    {
+        userHidden = hiddenForFullscreen = false;
+        fullscreenGraceUntil = DateTime.UtcNow.AddSeconds(8);
+        Show();
+    }
+    private void UpdateFullscreenVisibility()
+    {
+        if (handle == IntPtr.Zero || userHidden || sessionLocked || quitting || DateTime.UtcNow < fullscreenGraceUntil) return;
+        var shouldHide = settings.HideForFullscreen && DesktopService.IsForegroundFullscreen(handle, settings.DisplayDevice);
+        if (shouldHide && !hiddenForFullscreen) { hiddenForFullscreen = true; Hide(); }
+        else if (!shouldHide && hiddenForFullscreen) { hiddenForFullscreen = false; Show(); PositionIsland(); }
+    }
     private void SessionChanged(object sender, SessionSwitchEventArgs e)
     {
         Dispatcher.BeginInvoke(() =>
@@ -140,6 +190,8 @@ public partial class MainWindow : Window
             Battery.Text = PowerSummary.Describe(!batteryKnown || !power.BatteryChargeStatus.HasFlag(Forms.BatteryChargeStatus.NoSystemBattery),
                 power.BatteryLifePercent, batteryKnown && power.BatteryChargeStatus.HasFlag(Forms.BatteryChargeStatus.Charging));
             Battery.ToolTip = Battery.Text;
+            Battery.Visibility = batteryKnown && power.BatteryChargeStatus.HasFlag(Forms.BatteryChargeStatus.NoSystemBattery)
+                ? Visibility.Collapsed : Visibility.Visible;
             CompactTitle.Text = downloads.Entries.Count > 0 ? $"↓ {downloads.Entries.Count} active downloads" : media.Available ? media.Title : "Tisa Dynamic Island";
             Today.Text = DateTime.Now.ToString("ddd, dd MMM");
             UpdateEmptyStates();
@@ -220,8 +272,9 @@ public partial class MainWindow : Window
         Summary.Text = $"{clipboard.Entries.Count} recent copies\n{downloads.Entries.Count} downloads\n{shelf.Count} shelf files";
     }
     private void EnableClipboard(object sender, RoutedEventArgs e) { ClipboardToggle.IsChecked = true; SaveSettings(sender, e); }
-    private void HideToTray(object sender, RoutedEventArgs e) { pinned = false; SetExpanded(false); Hide(); }
+    private void HideToTray(object sender, RoutedEventArgs e) { userHidden = true; hiddenForFullscreen = false; pinned = false; SetExpanded(false); Hide(); }
     private void OpenPowerSettings(object sender, RoutedEventArgs e) => OpenPath("ms-settings:powersleep");
+    private void OpenDisplaySettings(object sender, RoutedEventArgs e) => OpenPath("ms-settings:display");
     private void CopyEntry(object sender, SelectionChangedEventArgs e)
     {
         if (ClipboardList.SelectedItem is not ClipboardEntry entry) return;
@@ -236,10 +289,17 @@ public partial class MainWindow : Window
         settings.ClipboardEnabled = ClipboardToggle.IsChecked == true;
         settings.DownloadsEnabled = DownloadsToggle.IsChecked == true;
         settings.ExpandOnHover = HoverToggle.IsChecked == true;
+        settings.WideLayout = WideToggle.IsChecked == true;
+        settings.FloatingIsland = FloatingToggle.IsChecked == true;
+        settings.HideForFullscreen = FullscreenToggle.IsChecked == true;
         if (!settings.ClipboardEnabled) clipboard.Clear();
         UpdateClipboardHint();
         UpdateEmptyStates();
         if (!settings.DownloadsEnabled) downloads.Entries.Clear();
+        SavePreferences(); PositionIsland(); UpdateFullscreenVisibility();
+    }
+    private void SavePreferences()
+    {
         try { SettingsStore.Save(settings); Status.Text = "Settings saved."; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Status.Text = "Couldn't save settings: " + ex.Message; }
     }
@@ -306,6 +366,11 @@ public partial class MainWindow : Window
 
     internal async Task RunSmokeTestAsync(string output)
     {
+        timer.Stop(); collapseTimer.Stop();
+        settings.WideLayout = false;
+        settings.HideForFullscreen = false;
+        settings.DisplayDevice = "";
+        SetExpanded(false);
         await RefreshAsync();
         if (Height != CollapsedHeight || Expanded.Visibility != Visibility.Collapsed)
             throw new InvalidOperationException("Collapsed island must not block the desktop below it.");
@@ -369,6 +434,23 @@ public partial class MainWindow : Window
         var narrowEncoder = new PngBitmapEncoder();
         narrowEncoder.Frames.Add(BitmapFrame.Create(narrow));
         using (var narrowFile = File.Create(Path.Combine(output, "HomeNarrow.png"))) narrowEncoder.Save(narrowFile);
+        settings.WideLayout = true;
+        settings.DisplayDevice = "Tisa-test-disconnected-display";
+        PositionIsland();
+        UpdateLayout();
+        if (!NativeMethods.GetWindowRect(handle, out var desktopRect)) throw new InvalidOperationException("Couldn't inspect desktop placement.");
+        var primaryArea = Forms.Screen.PrimaryScreen!.WorkingArea;
+        if (desktopRect.Left < primaryArea.Left || desktopRect.Top < primaryArea.Top || desktopRect.Right > primaryArea.Right || desktopRect.Bottom > primaryArea.Bottom)
+            throw new InvalidOperationException("Disconnected display fallback escaped the primary work area.");
+        var desktopDpi = VisualTreeHelper.GetDpi(this);
+        var desktopBitmap = new RenderTargetBitmap((int)(ActualWidth * desktopDpi.DpiScaleX),
+            (int)(ActualHeight * desktopDpi.DpiScaleY), desktopDpi.PixelsPerInchX, desktopDpi.PixelsPerInchY, PixelFormats.Pbgra32);
+        desktopBitmap.Render(this);
+        var desktopEncoder = new PngBitmapEncoder();
+        desktopEncoder.Frames.Add(BitmapFrame.Create(desktopBitmap));
+        using (var desktopFile = File.Create(Path.Combine(output, "DesktopWide.png"))) desktopEncoder.Save(desktopFile);
+        settings.WideLayout = false;
+        settings.DisplayDevice = "";
         TogglePin(this, new RoutedEventArgs());
         if (!pinned || !expanded) throw new InvalidOperationException("Pin must keep the island open.");
         TogglePin(this, new RoutedEventArgs());

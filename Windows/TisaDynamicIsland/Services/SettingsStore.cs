@@ -7,6 +7,10 @@ public sealed class UserSettings
     public bool ClipboardEnabled { get; set; } // Explicit opt-in; never persist copied content.
     public bool DownloadsEnabled { get; set; } = true;
     public bool ExpandOnHover { get; set; } = true;
+    public string DisplayDevice { get; set; } = "";
+    public bool WideLayout { get; set; }
+    public bool FloatingIsland { get; set; } = true;
+    public bool HideForFullscreen { get; set; } = true;
 }
 
 public static class SettingsStore

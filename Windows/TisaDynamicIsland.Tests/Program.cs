@@ -48,3 +48,27 @@ try
 }
 finally { Directory.Delete(folder, true); }
 Console.WriteLine("Passed real-file download size, completion and deletion checks.");
+
+foreach (var work in new[] { new PixelArea(0, 0, 1920, 1040), new PixelArea(-2560, 40, 2560, 1400),
+    new PixelArea(1920, -1080, 1920, 1040), new PixelArea(48, 0, 1872, 1080), new PixelArea(0, 0, 5120, 1400), new PixelArea(0, 0, 640, 480) })
+foreach (var scale in new[] { 1d, 1.25, 1.5, 2, 3 })
+foreach (var expanded in new[] { false, true })
+foreach (var wide in new[] { false, true })
+foreach (var floating in new[] { false, true })
+{
+    var placed = DesktopPlacement.Calculate(work, scale, expanded, wide, floating);
+    Check(placed.Left >= work.Left && placed.Top >= work.Top && placed.Left + placed.Width <= work.Left + work.Width && placed.Top + placed.Height <= work.Top + work.Height,
+        $"Island escaped its work area: {work}, {scale}, {expanded}, {wide}, {floating}");
+    Check(placed.Width > 0 && placed.Height > 0 && Math.Abs(placed.Left + placed.Width / 2d - (work.Left + work.Width / 2d)) <= 1, "Placement must have positive dimensions and be centered.");
+}
+var normal = DesktopPlacement.Calculate(new(0, 0, 3840, 2100), 2, true, false, true);
+Check(normal.Width == 1600 && normal.Height == 840 && normal.Top == 24, "200% DPI must preserve logical UI dimensions.");
+var widePlacement = DesktopPlacement.Calculate(new(0, 0, 3840, 2100), 2, true, true, true);
+Check(widePlacement.Width == 1920 && widePlacement.Height == 920, "Desktop-wide layout dimensions are wrong.");
+Check(DesktopPlacement.Calculate(new(0, 40, 1920, 1040), 1, false, false, false).Top == 40, "Attached island must respect a top taskbar.");
+Check(DesktopPlacement.Calculate(new(0, 0, 1920, 1080), double.NaN, false, false, true).Scale == 1, "Invalid DPI must fall back to 100%.");
+var screenBounds = new PixelArea(-1920, 0, 1920, 1080);
+Check(DesktopPlacement.CoversScreen(screenBounds, screenBounds), "Full-screen application not detected.");
+Check(!DesktopPlacement.CoversScreen(new(-1920, 0, 1920, 1040), screenBounds), "Normal maximized work-area window should not hide the island.");
+Check(!DesktopPlacement.CoversScreen(new(0, 0, 1920, 1080), screenBounds), "A full-screen app on another monitor must not hide the island.");
+Console.WriteLine("Passed 240 desktop placement combinations plus DPI, taskbar, ultrawide and fullscreen checks.");
