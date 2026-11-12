@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-      - name: Test download recognition
+      - name: Test downloads, clipboard ownership and battery states
         run: dotnet run --project Windows/TisaDynamicIsland.Tests -c Release
       - name: Build portable Windows app
         run: dotnet publish Windows/TisaDynamicIsland -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o artifacts/windows-x64

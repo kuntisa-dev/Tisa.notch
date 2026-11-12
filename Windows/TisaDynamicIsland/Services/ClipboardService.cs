@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Media.Imaging;
+using TisaDynamicIsland.Models;
 
 namespace TisaDynamicIsland.Services;
 
@@ -8,13 +9,14 @@ public sealed record ClipboardEntry(string Preview, string? Text, BitmapSource? 
 public sealed class ClipboardService
 {
     public ObservableCollection<ClipboardEntry> Entries { get; } = new();
-    private bool ignoreNext;
+    private readonly ClipboardSequence sequences = new();
     private readonly uint excluded = NativeMethods.RegisterClipboardFormat("ExcludeClipboardContentFromMonitorProcessing");
     private readonly uint history = NativeMethods.RegisterClipboardFormat("CanIncludeInClipboardHistory");
 
     public void Capture(IntPtr hwnd)
     {
-        if (ignoreNext) { ignoreNext = false; return; }
+        var sequence = NativeMethods.GetClipboardSequenceNumber();
+        if (!sequences.ShouldCapture(sequence)) return;
         if (NativeMethods.IsClipboardFormatAvailable(excluded)) return;
         // Honor Windows' opt-out format, used by credential tools.
         if (NativeMethods.IsClipboardFormatAvailable(history))
@@ -47,21 +49,25 @@ public sealed class ClipboardService
                 image.Freeze();
                 entry = new("Copied image", null, image);
             }
-            if (entry == null) return;
+            // If another application changed the clipboard while reading, discard this snapshot.
+            if (entry == null || sequence != NativeMethods.GetClipboardSequenceNumber()) return;
+            sequences.MarkCaptured(sequence);
             Entries.Insert(0, entry);
-            while (Entries.Count > 30) Entries.RemoveAt(Entries.Count - 1);
+            long ImageBytes(ClipboardEntry item) => item.Image == null ? 0 : (long)item.Image.PixelWidth * item.Image.PixelHeight * 4;
+            var imageBytes = Entries.Sum(ImageBytes);
+            while (Entries.Count > 30 || imageBytes > 32 * 1024 * 1024)
+            {
+                imageBytes -= ImageBytes(Entries[^1]);
+                Entries.RemoveAt(Entries.Count - 1);
+            }
         }
         catch (Exception e) when (e is ExternalException or InvalidOperationException) { /* Clipboard is busy; wait for its next change. */ }
     }
     public void Copy(ClipboardEntry entry)
     {
-        try
-        {
-            ignoreNext = true;
-            if (entry.Text != null) Clipboard.SetText(entry.Text);
-            else if (entry.Image != null) Clipboard.SetImage(entry.Image);
-        }
-        catch { ignoreNext = false; throw; }
+        if (entry.Text != null) Clipboard.SetText(entry.Text);
+        else if (entry.Image != null) Clipboard.SetImage(entry.Image);
+        sequences.MarkOwnWrite(NativeMethods.GetClipboardSequenceNumber());
     }
-    public void Clear() { Entries.Clear(); ignoreNext = false; }
+    public void Clear() { Entries.Clear(); sequences.Reset(); }
 }

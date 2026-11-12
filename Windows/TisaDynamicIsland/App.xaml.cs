@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Windows;
+using TisaDynamicIsland.Services;
 
 namespace TisaDynamicIsland;
 
@@ -10,7 +11,11 @@ public partial class App : Application
     {
         base.OnStartup(e);
         instance = new Mutex(true, "Local\\TisaDynamicIsland.Windows", out var created);
-        if (!created) { Shutdown(); return; }
+        if (!created)
+        {
+            NativeMethods.PostMessage(new IntPtr(0xFFFF), NativeMethods.ShowIslandMessage, IntPtr.Zero, IntPtr.Zero);
+            Shutdown(); return;
+        }
         MainWindow = new MainWindow();
         MainWindow.Show();
         if (e.Args.Length == 2 && e.Args[0] == "--smoke-test")

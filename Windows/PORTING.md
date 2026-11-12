@@ -9,12 +9,12 @@ Features marked pending are not exposed as working buttons or simulated data.
 
 | Mac functionality | Windows implementation / approach | Current status |
 | --- | --- | --- |
-| Floating island, hover, keyboard toggle | WPF transparent window; Win32 hotkeys and tray | Implemented; real-device QA pending |
+| Floating island, hover, keyboard toggle | WPF transparent window; Win32 hotkeys and tray | Implemented with compact/expanded layouts, pinning and second-instance activation; real-device QA pending |
 | Liquid Glass and themes | Windows composition / custom glass approximation | Basic dark surface only; advanced appearance pending |
 | Multi-monitor, full-screen hide, animation, Reduce Motion | Display configuration and accessibility settings | Primary monitor only; remainder pending |
 | Editable tabs, Home widgets, sizes, stacks, undo | Windows layout models and native views | Fixed Home plus five pages; editor pending |
 | Now playing, play/pause/skip | Windows global media sessions | Implemented; provider QA pending |
-| Album art, seeking, volume, visualizer | Session timeline/artwork + WASAPI loopback | Pending |
+| Album art, seeking, volume, visualizer | Session timeline/artwork + WASAPI loopback | Album art and seeking implemented when supported by the player; volume/visualizer pending |
 | Microphone mute and shortcut | Core Audio capture endpoint control | Pending |
 | Volume, brightness, keyboard-backlight HUD | Core Audio, display APIs, vendor-specific backlight | Pending; keyboard backlight is hardware dependent |
 | Clipboard text/images, memory-only history, clear | Win32 clipboard listener + WPF bitmap/text | Implemented; privacy formats and contention need device QA |

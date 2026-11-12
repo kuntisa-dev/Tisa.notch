@@ -3,6 +3,10 @@ namespace TisaDynamicIsland.Services;
 internal static class NativeMethods
 {
     internal const int ClipboardUpdate = 0x031D, Hotkey = 0x0312;
+    internal static readonly uint ShowIslandMessage = RegisterWindowMessage("TisaDynamicIsland.Windows.Show");
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern uint RegisterWindowMessage(string message);
+    [DllImport("user32.dll")] internal static extern bool PostMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
+    [DllImport("user32.dll")] internal static extern uint GetClipboardSequenceNumber();
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)] internal static extern bool AddClipboardFormatListener(IntPtr hwnd);
     [DllImport("user32.dll")] internal static extern bool RemoveClipboardFormatListener(IntPtr hwnd);
