@@ -24,7 +24,7 @@ To test this development build, quit the app from its tray menu, then double-cli
 and uploads nothing. See [the full Windows guide](Windows/README.md) for features, updates,
 uninstallation and the manual test checklist.
 
-This repository is private. Downloads require a GitHub account with access to the repository.
+This repository and its release downloads are public. No collaborator invitation is required.
 
 ## Mac version
 
