@@ -1,0 +1,56 @@
+{
+  "id": "bts_army_scrapbook",
+  "name": "BTS ARMY Scrapbook",
+  "canvas": {
+    "width": 1086,
+    "height": 1448
+  },
+  "coordinateSystem": "top-left origin, pixels",
+  "slots": [
+    {
+      "index": 1,
+      "x": 151,
+      "y": 258,
+      "width": 360,
+      "height": 401,
+      "cornerRadius": 17,
+      "crop": "aspectFill"
+    },
+    {
+      "index": 2,
+      "x": 566,
+      "y": 258,
+      "width": 355,
+      "height": 401,
+      "cornerRadius": 17,
+      "crop": "aspectFill"
+    },
+    {
+      "index": 3,
+      "x": 153,
+      "y": 696,
+      "width": 358,
+      "height": 395,
+      "cornerRadius": 17,
+      "crop": "aspectFill"
+    },
+    {
+      "index": 4,
+      "x": 566,
+      "y": 696,
+      "width": 355,
+      "height": 395,
+      "cornerRadius": 17,
+      "crop": "aspectFill"
+    }
+  ],
+  "assetFiles": {
+    "original": "bts_original.png",
+    "overlay": "bts_frame_overlay.png"
+  },
+  "compositingOrder": [
+    "draw user images clipped to slot rectangles",
+    "draw bts_frame_overlay.png above at 0,0 to full canvas size"
+  ],
+  "notes": "Rounded mask boundaries are approximate and should be checked against real captured photos. Gray lavender placeholder pixels have been made transparent within these four regions."
+}

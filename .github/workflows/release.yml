@@ -1,4 +1,4 @@
-name: "Deploy Boring Notch"
+name: "Deploy Tisa Dynamic Island"
 
 on:
   workflow_dispatch:
@@ -18,8 +18,8 @@ permissions:
   pull-requests: read
 
 env:
-  PROJECT_NAME: boringNotch
-  APP_NAME: Boring Notch
+  PROJECT_NAME: TisaDynamicIsland
+  APP_NAME: Tisa Dynamic Island
   BETA_CHANNEL_NAME: beta
 
 jobs:
@@ -605,28 +605,28 @@ jobs:
             end
             auto_updates true
             depends_on macos: :sonoma
-            app "Boring Notch.app"
+            app "Tisa Dynamic Island.app"
 
             postflight do
-              app_path = appdir/"Boring Notch.app"
+              app_path = appdir/"Tisa Dynamic Island.app"
               next unless app_path.exist?
               system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", app_path]
             end
 
-            uninstall quit: "theboringteam.boringnotch"
+            uninstall quit: "com.kuntisa.tisadynamicisland"
 
             zap trash: [
-              "~/Library/Application Scripts/theboringteam.boringnotch/",
-              "~/Library/Containers/theboringteam.boringnotch/",
+              "~/Library/Application Scripts/com.kuntisa.tisadynamicisland/",
+              "~/Library/Containers/com.kuntisa.tisadynamicisland/",
             ]
           end
           CASK
           }
 
-          write_cask "boring-notch@rc" "Boring Notch RC" \
+          write_cask "boring-notch@rc" "Tisa Dynamic Island RC" \
             "Not so boring notch That Rocks (Release Candidate)" > boring-notch@rc.rb
           if [[ "${IS_BETA}" == "false" ]]; then
-            write_cask "boring-notch" "Boring Notch" \
+            write_cask "boring-notch" "Tisa Dynamic Island" \
               "Not so boring notch That Rocks" > boring-notch.rb
           fi
 
@@ -708,10 +708,10 @@ jobs:
           fi
           {
             if [[ "${RELEASE_SUCCEEDED}" == "true" ]]; then
-              echo "✅ Released Boring Notch v${VERSION} (${BUILD_TYPE} build ${BUILD_NUMBER})"
+              echo "✅ Released Tisa Dynamic Island v${VERSION} (${BUILD_TYPE} build ${BUILD_NUMBER})"
               echo "🍺 Homebrew cask updated"
               echo "📱 Sparkle appcast updated"
             else
-              echo "❌ Release failed${VERSION:+ for Boring Notch v${VERSION}}"
+              echo "❌ Release failed${VERSION:+ for Tisa Dynamic Island v${VERSION}}"
             fi
           } >> "$GITHUB_STEP_SUMMARY"

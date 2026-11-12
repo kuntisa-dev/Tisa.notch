@@ -33,9 +33,9 @@ class WorkflowSmokeTests(unittest.TestCase):
 
     def test_nightly_uses_the_fixed_rolling_tag_and_asset(self) -> None:
         self.assertIn("TAG: nightly", self.nightly)
-        self.assertIn("ASSET_NAME: boringNotch-nightly.dmg", self.nightly)
+        self.assertIn("ASSET_NAME: TisaDynamicIsland-nightly.dmg", self.nightly)
         self.assertNotRegex(self.nightly, r'TAG="nightly-\$')
-        self.assertNotRegex(self.nightly, r"ASSET_NAME=\"boringNotch-\$")
+        self.assertNotRegex(self.nightly, r"ASSET_NAME=\"TisaDynamicIsland-\$")
 
     def test_nightly_uses_the_rolling_release_title(self) -> None:
         self.assertIn("TITLE: Latest Nightly", self.nightly)
@@ -308,19 +308,19 @@ class WorkflowSmokeTests(unittest.TestCase):
             self.assertNotIn(removed, self.nightly)
 
     def test_built_product_is_named_boring_notch(self) -> None:
-        # The Xcode product and app bundle are "Boring Notch", while the public
-        # DMG keeps the legacy boringNotch.dmg name for download/appcast
-        # compatibility. The project/target/scheme remain boringNotch.
+        # The Xcode product and app bundle are "Tisa Dynamic Island", while the public
+        # DMG keeps the legacy TisaDynamicIsland.dmg name for download/appcast
+        # compatibility. The project/target/scheme remain TisaDynamicIsland.
         pbxproj = (
-            REPOSITORY_ROOT / "boringNotch.xcodeproj" / "project.pbxproj"
+            REPOSITORY_ROOT / "TisaDynamicIsland.xcodeproj" / "project.pbxproj"
         ).read_text(encoding="utf-8")
-        self.assertEqual(pbxproj.count('PRODUCT_NAME = "Boring Notch";'), 2)
-        self.assertEqual(pbxproj.count('INFOPLIST_KEY_CFBundleName = "Boring Notch";'), 2)
-        self.assertEqual(pbxproj.count('INFOPLIST_KEY_CFBundleDisplayName = "Boring Notch";'), 2)
+        self.assertEqual(pbxproj.count('PRODUCT_NAME = "Tisa Dynamic Island";'), 2)
+        self.assertEqual(pbxproj.count('INFOPLIST_KEY_CFBundleName = "Tisa Dynamic Island";'), 2)
+        self.assertEqual(pbxproj.count('INFOPLIST_KEY_CFBundleDisplayName = "Tisa Dynamic Island";'), 2)
 
         # Reusable build: archives under the project name, exports the app under
         # APP_NAME, and publishes the compatibility DMG under PROJECT_NAME.
-        self.assertIn("APP_NAME: Boring Notch", self.build_reusable)
+        self.assertIn("APP_NAME: Tisa Dynamic Island", self.build_reusable)
         self.assertIn('"Release/$APP_NAME.app"', self.build_reusable)
         self.assertIn('"Release/$PROJECT_NAME.dmg"', self.build_reusable)
         self.assertIn('name: ${{ env.PROJECT_NAME }}.dmg', self.build_reusable)
@@ -329,19 +329,19 @@ class WorkflowSmokeTests(unittest.TestCase):
 
         # Release pipeline: draft download, artifact download, release upload,
         # embedded notes, and the Homebrew cask all use the legacy DMG name.
-        self.assertIn("APP_NAME: Boring Notch", self.release)
+        self.assertIn("APP_NAME: Tisa Dynamic Island", self.release)
         self.assertIn('--pattern "$PROJECT_NAME.dmg"', self.release)
         self.assertIn('name: ${{ env.PROJECT_NAME }}.dmg', self.release)
         self.assertIn('"Release/$PROJECT_NAME.dmg"', self.release)
         self.assertIn("printf '%s' \"$RELEASE_NOTES\" > \"Release/${PROJECT_NAME}.html\"", self.release)
         self.assertIn("/${PROJECT_NAME}.dmg", self.release)
-        self.assertIn('app "Boring Notch.app"', self.release)
+        self.assertIn('app "Tisa Dynamic Island.app"', self.release)
         self.assertNotIn("Boring%20Notch.dmg", self.release)
-        self.assertNotIn('app "boringNotch.app"', self.release)
+        self.assertNotIn('app "TisaDynamicIsland.app"', self.release)
 
         # Nightly: downloads the compatibility artifact, then renames it to the
         # fixed rolling asset name (which is intentionally unchanged).
-        self.assertIn("APP_NAME: Boring Notch", self.nightly)
+        self.assertIn("APP_NAME: Tisa Dynamic Island", self.nightly)
         self.assertIn('name: ${{ env.PROJECT_NAME }}.dmg', self.nightly)
         self.assertIn('mv "Release/${PROJECT_NAME}.dmg" "Release/${ASSET_NAME}"', self.nightly)
         self.assertNotIn("${APP_NAME}.dmg", self.nightly)
@@ -355,7 +355,7 @@ class WorkflowSmokeTests(unittest.TestCase):
         self.assertIn("updater/appcast.xml", self.release)
         self.assertIn("publish_stable", self.release)
         self.assertIn("publish_beta", self.release)
-        self.assertNotIn("boringNotch-nightly.dmg", self.release)
+        self.assertNotIn("TisaDynamicIsland-nightly.dmg", self.release)
         self.assertNotIn('TAG: nightly', self.release)
         self.assertNotIn("actions/attest", self.release)
         self.assertNotIn("artifact-metadata", self.release)
