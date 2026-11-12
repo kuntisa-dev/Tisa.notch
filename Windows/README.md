@@ -32,18 +32,27 @@ dotnet publish Windows/TisaDynamicIsland -c Release -r win-x64 --self-contained 
 
 ## Current functionality
 
-- Top-center, always-on-top island; expand on hover or click and collapse with Escape.
+- Compact top-center island that expands into a larger workspace on hover or click.
+  Use **Pin / Unpin** to control automatic collapse, or Escape to collapse immediately.
 - Ctrl + Alt + Space toggles the island; the tray menu opens settings or quits.
-- Music title, artist and previous/play-pause/next using Windows media sessions.
-  Only apps that publish a Windows media session can be controlled.
+- Ctrl + 1–5 switches pages, and tabs support keyboard focus and arrow navigation.
+  Opening the app a second time brings the existing island back into view.
+- Music title, artist, album art, playback timeline, seeking and previous/play-pause/next
+  using Windows media sessions. Controls are enabled only when the player advertises
+  support. Slow/unresponsive players time out and reconnect automatically.
+  Only apps that publish a Windows media session can be controlled; artwork and seeking
+  are optional and depend on the player.
 - Clipboard text and images, explicitly enabled in Settings. The last 30 entries
-  stay in memory and are cleared on lock or exit. Password-manager exclusion formats
+  stay in memory with a 32 MB image budget and are cleared on lock or exit. Password-manager exclusion formats
   are honored when supplied; do not enable capture if your tools omit these markers.
 - Chrome/Edge `.crdownload` and Firefox `.part` files in the Windows Downloads known
   folder, including redirected folders. Shows downloaded bytes, without inventing a percentage.
-- File shelf: drop local files or folders, double-click to open, drag to other apps.
+- File shelf: drop local files or folders, double-click or Enter to open, drag to other apps,
+  and Delete to remove a reference. Duplicate paths are ignored without case sensitivity.
   The shelf stores in-memory references; clearing it does not delete files.
 - Battery status and persistent preferences in `%LOCALAPPDATA%\TisaDynamicIsland\settings.json`.
+- Settings includes **Hide to tray**, **Windows power settings**, and platform support notes.
+  Windows power settings are not direct fan-speed controls.
 
 The first layout anchors to the primary monitor's work area. Selecting a monitor,
 full-screen behavior, richer animations and editable Home widgets are still pending.
@@ -66,6 +75,10 @@ Download-file classification tests can run on macOS or Windows:
 dotnet run --project Windows/TisaDynamicIsland.Tests -c Release
 ```
 
+The regression runner checks clipboard ownership/duplicate events, invalid and absent
+battery states, and real download files that complete or disappear. Windows smoke
+checks also cover folder recovery, unchanged list stability, selected tabs, pinning,
+collapsing and scrollable support notes. Screenshots include a narrower 600 px layout.
 The GitHub workflow builds and packages on a Windows runner. A macOS cross-build
 checks compilation but cannot verify native Windows behavior; test on a real Windows
 11 PC before treating any feature as ready to distribute.
