@@ -132,11 +132,16 @@ public partial class MainWindow : Window
         var overview = IslandInteraction.ShowOverview(Width);
         OverviewCard.Visibility = overview ? Visibility.Visible : Visibility.Collapsed;
         OverviewColumn.Width = overview ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
-        TabBar.Width = IslandInteraction.NavigationWidth(Width);
-        var scrollingTabs = Width - 28 < TabBar.Width;
-        NavigationViewport.Height = scrollingTabs ? 64 : 44;
-        if (expanded) PageArea.Height = Math.Max(40, Height - 170 - (scrollingTabs ? 20 : 0));
+        // Use the actual inner viewport; the window width includes borders and padding.
+        // Overestimating it by even a few pixels creates a scrollbar that clips tab text.
+        var available = NavigationViewport.ActualWidth > 0 ? NavigationViewport.ActualWidth : Math.Max(1, Width - 30);
+        TabBar.Width = Math.Max(530, available);
+        var scrollbar = available < 530 ? SystemParameters.HorizontalScrollBarHeight : 0;
+        NavigationViewport.Height = 52 + scrollbar;
+        if (expanded) PageArea.Height = Math.Max(40, Height - 178 - scrollbar);
     }
+    private void NavigationSizeChanged(object sender, SizeChangedEventArgs e)
+    { if (IsLoaded) UpdateResponsiveLayout(); }
     private void CaptureClipboard()
     {
         clipboardRetry.Stop();
@@ -412,6 +417,15 @@ public partial class MainWindow : Window
                 throw new InvalidOperationException("Page did not expand: " + tab);
             if (TabBar.Children.OfType<RadioButton>().Single(b => b.IsChecked == true).Tag as string != tab)
                 throw new InvalidOperationException("Selected tab doesn't match the displayed page.");
+            foreach (var navigation in TabBar.Children.OfType<RadioButton>())
+            {
+                navigation.ApplyTemplate();
+                var surface = navigation.Template.FindName("Surface", navigation) as Border;
+                if (surface?.Child is not ContentPresenter text || text.ActualHeight < 12 || text.ActualWidth < 20)
+                    throw new InvalidOperationException("Navigation label is clipped: " + navigation.Content);
+            }
+            if (NavigationViewport.ActualWidth >= 530 && NavigationViewport.ScrollableWidth > 1)
+                throw new InvalidOperationException("Standard navigation should not need a horizontal scrollbar.");
             var dpi = VisualTreeHelper.GetDpi(this);
             var bitmap = new RenderTargetBitmap((int)(ActualWidth * dpi.DpiScaleX),
                 (int)(ActualHeight * dpi.DpiScaleY), dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);

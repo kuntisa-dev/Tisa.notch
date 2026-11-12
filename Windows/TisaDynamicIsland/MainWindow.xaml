@@ -21,8 +21,8 @@
     </StackPanel>
    </Grid>
    <StackPanel x:Name="Expanded" Visibility="Collapsed">
-    <ScrollViewer x:Name="NavigationViewport" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Height="44" Margin="0,12,0,12" AutomationProperties.Name="Page navigation">
-    <UniformGrid x:Name="TabBar" Columns="5">
+    <ScrollViewer x:Name="NavigationViewport" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" BorderThickness="0" Padding="0" Height="52" Margin="0,12,0,12" SizeChanged="NavigationSizeChanged" AutomationProperties.Name="Page navigation">
+    <UniformGrid x:Name="TabBar" Columns="5" Height="44" VerticalAlignment="Top" HorizontalAlignment="Left">
      <RadioButton Content="Home" Tag="Home" GroupName="Page" Style="{StaticResource Tab}" IsChecked="True" Checked="SelectTab"/>
      <RadioButton Content="Clipboard" Tag="Clipboard" GroupName="Page" Style="{StaticResource Tab}" Checked="SelectTab"/>
      <RadioButton Content="Downloads" Tag="Downloads" GroupName="Page" Style="{StaticResource Tab}" Checked="SelectTab"/>
@@ -31,7 +31,7 @@
     </UniformGrid></ScrollViewer>
     <Grid Height="250" x:Name="PageArea">
      <ScrollViewer x:Name="HomePage" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-     <Grid MinHeight="250">
+     <Grid MinHeight="240">
       <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition x:Name="OverviewColumn"/></Grid.ColumnDefinitions>
       <Border Background="#283B4B59" CornerRadius="18" Padding="18" Margin="0,0,12,0">
        <StackPanel>
