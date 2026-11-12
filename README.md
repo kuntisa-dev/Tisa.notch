@@ -46,3 +46,7 @@ xattr -dr com.apple.quarantine "/Applications/Tisa Dynamic Island.app"
 Tisa Dynamic Island is licensed under the GNU General Public License v3.0, the same as Boring Notch. See [LICENSE](LICENSE) and [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES).
 
 Based on [Boring Notch](https://github.com/TheBoredTeam/boring.notch) by TheBoredTeam and its contributors. Icon by [@maxtron95](https://github.com/maxtron95). Media control uses [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter), and the shelf started from [NotchDrop](https://github.com/Lakr233/NotchDrop).
+
+## GitHub automation
+
+Builds run with Xcode 26. Code scanning and updater hosting are optional: configure the corresponding GitHub service, then set the repository Actions variable `ENABLE_CODEQL` or `ENABLE_PAGES` to `true` to enable its workflow. Code scanning and Pages availability depend on the repository plan and visibility.
