@@ -54,8 +54,23 @@ dotnet publish Windows/TisaDynamicIsland -c Release -r win-x64 --self-contained 
 - Settings includes **Hide to tray**, **Windows power settings**, and platform support notes.
   Windows power settings are not direct fan-speed controls.
 
-The first layout anchors to the primary monitor's work area. Selecting a monitor,
-full-screen behavior, richer animations and editable Home widgets are still pending.
+Desktop PCs and laptops use the same Windows build. In Settings → **Desktop & displays**:
+
+- Choose a monitor, or follow the primary display. If a saved monitor is disconnected,
+  the island falls back to the primary display and returns when that monitor reconnects.
+- Enable a wider 960 × 460 workspace on large monitors (the standard size is 800 × 420).
+- Float below the top edge, or attach to the top of the monitor's work area.
+- Hide over full-screen apps on the chosen display. Full-screen apps on other displays
+  do not hide it. Bringing the island back from the tray/hotkey gives eight seconds to interact.
+- Open Windows Display settings directly. Placement respects taskbar space and uses
+  the selected window's DPI instead of assuming every screen uses 100% scaling.
+
+PCs without a battery omit the battery label. Restoring the island after full-screen use
+does not request keyboard focus, and explicitly hiding to tray remains respected.
+Display placement calculations are tested at 100%, 125%, 150%, 200% and 300% scaling,
+including ultrawide screens and monitors above or left of the primary display.
+Native multi-monitor, full-screen and mixed-DPI behavior still needs Windows device testing.
+Richer animations and editable Home widgets are still pending.
 Camera, microphones and fan hardware are not accessed by this build.
 
 ### Feature availability
@@ -78,7 +93,9 @@ dotnet run --project Windows/TisaDynamicIsland.Tests -c Release
 The regression runner checks clipboard ownership/duplicate events, invalid and absent
 battery states, and real download files that complete or disappear. Windows smoke
 checks also cover folder recovery, unchanged list stability, selected tabs, pinning,
-collapsing and scrollable support notes. Screenshots include a narrower 600 px layout.
+collapsing and scrollable support notes. The regression suite also checks 240 combinations
+of display geometry, scaling, layout size and floating/attached placement, plus full-screen
+bounds detection. Screenshots include a narrower 600 px layout.
 The GitHub workflow builds and packages on a Windows runner. A macOS cross-build
 checks compilation but cannot verify native Windows behavior; test on a real Windows
 11 PC before treating any feature as ready to distribute.

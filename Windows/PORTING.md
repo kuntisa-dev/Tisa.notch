@@ -11,7 +11,7 @@ Features marked pending are not exposed as working buttons or simulated data.
 | --- | --- | --- |
 | Floating island, hover, keyboard toggle | WPF transparent window; Win32 hotkeys and tray | Implemented with compact/expanded layouts, pinning and second-instance activation; real-device QA pending |
 | Liquid Glass and themes | Windows composition / custom glass approximation | Basic dark surface only; advanced appearance pending |
-| Multi-monitor, full-screen hide, animation, Reduce Motion | Display configuration and accessibility settings | Primary monitor only; remainder pending |
+| Multi-monitor, full-screen hide, animation, Reduce Motion | Display configuration and accessibility settings | Display choice, DPI placement, disconnect fallback and full-screen hiding implemented; native device QA and animation/accessibility refinements pending |
 | Editable tabs, Home widgets, sizes, stacks, undo | Windows layout models and native views | Fixed Home plus five pages; editor pending |
 | Now playing, play/pause/skip | Windows global media sessions | Implemented; provider QA pending |
 | Album art, seeking, volume, visualizer | Session timeline/artwork + WASAPI loopback | Album art and seeking implemented when supported by the player; volume/visualizer pending |
