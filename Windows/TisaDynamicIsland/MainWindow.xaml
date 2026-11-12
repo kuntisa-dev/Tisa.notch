@@ -21,7 +21,7 @@
     </StackPanel>
    </Grid>
    <StackPanel x:Name="Expanded" Visibility="Collapsed">
-    <ScrollViewer x:Name="NavigationViewport" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Height="48" Margin="0,12,0,12" AutomationProperties.Name="Page navigation">
+    <ScrollViewer x:Name="NavigationViewport" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Height="44" Margin="0,12,0,12" AutomationProperties.Name="Page navigation">
     <UniformGrid x:Name="TabBar" Columns="5">
      <RadioButton Content="Home" Tag="Home" GroupName="Page" Style="{StaticResource Tab}" IsChecked="True" Checked="SelectTab"/>
      <RadioButton Content="Clipboard" Tag="Clipboard" GroupName="Page" Style="{StaticResource Tab}" Checked="SelectTab"/>
