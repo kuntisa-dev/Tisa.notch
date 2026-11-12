@@ -30,6 +30,7 @@ public partial class MainWindow : Window
     private bool refreshing, expanded, pinned, quitting;
     private bool sessionLocked;
     private Point shelfDragOrigin;
+    private ShelfEntry? shelfDragEntry;
     private string selectedPage = "Home";
 
     public MainWindow()
@@ -256,20 +257,32 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
     private void ClearShelf(object sender, RoutedEventArgs e) => shelf.Clear();
-    private void OpenShelfItem(object sender, MouseButtonEventArgs e) { if (ShelfList.SelectedItem is ShelfEntry entry) OpenPath(entry.Path); }
+    private void OpenShelfItem(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is DependencyObject element && ItemsControl.ContainerFromElement(ShelfList, element) is ListBoxItem { DataContext: ShelfEntry entry })
+            OpenPath(entry.Path);
+    }
     private void ShelfKeyDown(object sender, KeyEventArgs e)
     {
         if (ShelfList.SelectedItem is not ShelfEntry entry) return;
         if (e.Key == Key.Delete) { shelf.Remove(entry); e.Handled = true; }
         else if (e.Key == Key.Enter) { OpenPath(entry.Path); e.Handled = true; }
     }
-    private void BeginShelfDrag(object sender, MouseButtonEventArgs e) => shelfDragOrigin = e.GetPosition(ShelfList);
+    private void BeginShelfDrag(object sender, MouseButtonEventArgs e)
+    {
+        shelfDragOrigin = e.GetPosition(ShelfList);
+        shelfDragEntry = e.OriginalSource is DependencyObject element && ItemsControl.ContainerFromElement(ShelfList, element) is ListBoxItem item
+            ? item.DataContext as ShelfEntry : null;
+    }
     private void DragShelfItem(object sender, MouseEventArgs e)
     {
         var delta = e.GetPosition(ShelfList) - shelfDragOrigin;
-        if (e.LeftButton == MouseButtonState.Pressed && ShelfList.SelectedItem is ShelfEntry entry &&
+        if (e.LeftButton == MouseButtonState.Pressed && shelfDragEntry is ShelfEntry entry &&
             (Math.Abs(delta.X) >= SystemParameters.MinimumHorizontalDragDistance || Math.Abs(delta.Y) >= SystemParameters.MinimumVerticalDragDistance))
+        {
+            shelfDragEntry = null;
             DragDrop.DoDragDrop(ShelfList, new DataObject(DataFormats.FileDrop, new[] { entry.Path }), DragDropEffects.Copy);
+        }
     }
     private void OpenDownloads(object sender, RoutedEventArgs e) => OpenPath(downloads.Folder);
     private void OpenPath(string path)

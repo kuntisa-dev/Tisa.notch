@@ -24,6 +24,12 @@
 
 ## Validation and limits
 
+For the 0.2.0 update, the local .NET build and portable regression checks passed.
+The GitHub Windows job was blocked before starting because the account's Actions
+billing/spending limit requires attention. The new native smoke checks and screenshots
+have therefore **not run for this version**. The successful Windows checks from 0.1.0
+do not establish runtime validation for 0.2.0.
+
 Portable regression checks exercise real download files, battery values and clipboard sequence
 handling. Windows smoke checks render every page and a narrow Home layout, and exercise
 folder recovery, stable download items, selection, pinning and collapse.
