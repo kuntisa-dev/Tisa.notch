@@ -1,0 +1,29 @@
+Tisa Dynamic Island - Windows 11 x64 acceptance checklist
+
+1. Quit any running Tisa Dynamic Island from its tray menu.
+2. Double-click Test-Windows.cmd. Wait for the result. No admin rights or SDK are required.
+3. Open the Tisa-Windows-Test folder created on your Desktop. Check result.txt and all PNG files.
+   Check text, buttons and scroll bars for clipping. Review files before sharing; media titles may be visible.
+4. Start TisaDynamicIsland.exe normally and complete the checks below.
+
+Manual checks (mark PASS, FAIL or NOT AVAILABLE):
+[ ] Ctrl+Alt+Space opens/collapses; Escape collapses; Ctrl+1 through Ctrl+5 changes pages.
+[ ] Hover, Pin/Unpin and Hide to tray behave as labeled; the tray menu can always bring it back.
+[ ] Launching the app again brings the existing island back instead of making a duplicate.
+[ ] Play a song/video: title, artwork and controls match the player. Seek only if the slider is enabled.
+[ ] Enable clipboard history. Copy harmless text and a small image, copy an item back, then copy new text.
+    All appear correctly. Clear history and disable capture. Lock/unlock Windows: history remains empty.
+[ ] Download a file in your browser to Downloads. Bytes update; completed/cancelled files leave the list.
+[ ] Drop files into Shelf, open with Enter/double-click, drag one out, and remove with Delete.
+    Original files must remain on disk after removing shelf references.
+[ ] On a desktop PC without a battery, no battery label appears.
+[ ] In Settings, switch Floating/Wide layout. Every page and button remains reachable.
+[ ] If you have another monitor: select it, test different Windows display scaling, then disconnect it.
+    The island should fall back to the primary monitor and return when the display reconnects.
+[ ] Full-screen a browser/video on the island's display: it hides. Exit full-screen: it returns.
+    Full-screen on another monitor should not hide it. Hide to tray must stay hidden until you reopen it.
+[ ] Move/resize the Windows taskbar or change display resolution: the island stays in the work area.
+
+If anything fails, record the step, expected behavior, actual behavior, and relevant screenshot.
+Automatic checks do not prove all native interactions or hardware combinations work.
+Camera, calendar, AI usage and fan control are not implemented in this build and should not have active controls.

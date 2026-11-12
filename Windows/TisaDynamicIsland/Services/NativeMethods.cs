@@ -25,6 +25,7 @@ internal static class NativeMethods
     [DllImport("user32.dll")] internal static extern bool OpenClipboard(IntPtr hwnd);
     [DllImport("user32.dll")] internal static extern bool CloseClipboard();
     [DllImport("kernel32.dll")] internal static extern IntPtr GlobalLock(IntPtr memory);
+    [DllImport("kernel32.dll")] internal static extern UIntPtr GlobalSize(IntPtr memory);
     [DllImport("kernel32.dll")] internal static extern bool GlobalUnlock(IntPtr memory);
     [DllImport("shell32.dll")] private static extern int SHGetKnownFolderPath(in Guid id, uint flags, IntPtr token, out IntPtr path);
     internal static string DownloadsFolder()

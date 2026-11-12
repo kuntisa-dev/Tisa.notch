@@ -1,4 +1,7 @@
+global using System.Runtime.InteropServices;
+global using System.Collections.ObjectModel;
 using TisaDynamicIsland.Models;
+using TisaDynamicIsland.Services;
 
 // A standalone runner keeps these filesystem rules testable on macOS and Windows.
 var cases = new Dictionary<string, bool>
@@ -14,7 +17,8 @@ foreach (var (path, expected) in cases)
     if (DownloadEntry.IsPartial(path) != expected) throw new Exception($"Unexpected classification: {path}");
 Console.WriteLine($"Passed {cases.Count} browser download classification cases.");
 
-void Check(bool passed, string message) { if (!passed) throw new Exception(message); }
+var assertionCount = cases.Count;
+void Check(bool passed, string message) { assertionCount++; if (!passed) throw new Exception(message); }
 var sequences = new ClipboardSequence();
 Check(!sequences.ShouldCapture(0), "Uninitialized clipboard must be skipped.");
 sequences.MarkOwnWrite(10);
@@ -72,3 +76,66 @@ Check(DesktopPlacement.CoversScreen(screenBounds, screenBounds), "Full-screen ap
 Check(!DesktopPlacement.CoversScreen(new(-1920, 0, 1920, 1040), screenBounds), "Normal maximized work-area window should not hide the island.");
 Check(!DesktopPlacement.CoversScreen(new(0, 0, 1920, 1080), screenBounds), "A full-screen app on another monitor must not hide the island.");
 Console.WriteLine("Passed 240 desktop placement combinations plus DPI, taskbar, ultrawide and fullscreen checks.");
+
+Check(IslandInteraction.ExpandOnHotkey(false, true), "Hidden expanded island must reopen, not collapse.");
+Check(IslandInteraction.ExpandOnHotkey(false, false), "Hidden collapsed island must open.");
+Check(IslandInteraction.ExpandOnHotkey(true, false), "Visible collapsed island must expand.");
+Check(!IslandInteraction.ExpandOnHotkey(true, true), "Visible expanded island must collapse.");
+Check(!IslandInteraction.ShowOverview(600) && IslandInteraction.ShowOverview(800), "Narrow screens must prioritize the player.");
+Check(IslandInteraction.NavigationWidth(300) >= 530, "Tabs must stay usable through scrolling on narrow screens.");
+Console.WriteLine("Passed all four hotkey states and responsive layout checks.");
+
+var random = new Random(41);
+for (var iteration = 0; iteration < 10_000; iteration++)
+{
+    var work = new PixelArea(random.Next(-30000, 30000), random.Next(-30000, 30000), random.Next(120, 16000), random.Next(120, 10000));
+    var placement = DesktopPlacement.Calculate(work, 0.5 + random.NextDouble() * 7.5, random.Next(2) == 0, random.Next(2) == 0, random.Next(2) == 0);
+    Check(placement.Left >= work.Left && placement.Top >= work.Top && placement.Left + placement.Width <= work.Left + work.Width && placement.Top + placement.Height <= work.Top + work.Height,
+        "Random display layout escaped its bounds.");
+}
+Console.WriteLine("Passed 10,000 deterministic randomized desktop geometry cases.");
+
+// Test the actual asynchronous service, including a filesystem operation that is stuck.
+using var releaseScan = new ManualResetEventSlim();
+using var scanStarted = new ManualResetEventSlim();
+var scanCalls = 0;
+var stalled = new DownloadService("unused-test-folder", _ =>
+{
+    Interlocked.Increment(ref scanCalls); scanStarted.Set(); releaseScan.Wait();
+    return new[] { new DownloadEntry("recovered.crdownload", 100) };
+}, TimeSpan.FromMilliseconds(100));
+try
+{
+    var first = stalled.RefreshAsync();
+    Check(scanStarted.Wait(TimeSpan.FromSeconds(5)), "Background scan failed to start.");
+    await first;
+    Check(stalled.Error != null && stalled.Entries.Count == 0, "A stalled scan must report a timeout, without stale entries.");
+    await stalled.RefreshAsync();
+    Check(scanCalls == 1, "Retrying a stalled folder must not spawn another blocked filesystem scan.");
+    releaseScan.Set();
+    await stalled.RefreshAsync();
+    Check(stalled.Error == null && stalled.Entries.Count == 1, "Downloads did not recover after the filesystem became responsive.");
+}
+finally { releaseScan.Set(); }
+Console.WriteLine("Passed asynchronous download timeout, single in-flight scan and recovery checks.");
+
+var serviceFolder = Path.Combine(Path.GetTempPath(), "tisa-service-" + Guid.NewGuid());
+Directory.CreateDirectory(serviceFolder);
+try
+{
+    var service = new DownloadService(serviceFolder);
+    File.WriteAllText(Path.Combine(serviceFolder, "active.part"), "download");
+    await service.RefreshAsync();
+    var entry = service.Entries.Single();
+    await service.RefreshAsync();
+    Check(ReferenceEquals(entry, service.Entries.Single()), "Unchanged download should preserve the list item.");
+    Directory.Delete(serviceFolder, true);
+    await service.RefreshAsync();
+    Check(service.Error != null && service.Entries.Count == 0, "Deleted folder must clear stale entries.");
+    Directory.CreateDirectory(serviceFolder);
+    await service.RefreshAsync();
+    Check(service.Error == null && service.Entries.Count == 0, "Recreated folder must recover.");
+}
+finally { if (Directory.Exists(serviceFolder)) Directory.Delete(serviceFolder, true); }
+Console.WriteLine("Passed actual DownloadService list stability, missing-folder and recovery checks.");
+Console.WriteLine($"PASS: {assertionCount} assertions.");

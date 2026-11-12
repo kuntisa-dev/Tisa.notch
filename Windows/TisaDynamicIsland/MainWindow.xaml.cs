@@ -24,19 +24,22 @@ public partial class MainWindow : Window
     private bool mediaCommandPending, seeking;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(2) };
     private readonly DispatcherTimer collapseTimer = new() { Interval = TimeSpan.FromMilliseconds(700) };
+    private readonly DispatcherTimer clipboardRetry = new() { Interval = TimeSpan.FromMilliseconds(120) };
+    private int clipboardAttempts;
     private Forms.NotifyIcon? tray;
     private HwndSource? source;
     private IntPtr handle;
     private bool refreshing, expanded, pinned, quitting;
     private bool sessionLocked;
     private bool refreshingDisplays, userHidden, hiddenForFullscreen, positioning;
-    private DateTime fullscreenGraceUntil;
+    private long fullscreenGraceUntil;
     private Point shelfDragOrigin;
     private ShelfEntry? shelfDragEntry;
     private string selectedPage = "Home";
 
-    public MainWindow()
+    public MainWindow(bool smokeTest = false)
     {
+        if (smokeTest) settings.ClipboardEnabled = false;
         InitializeComponent();
         ClipboardList.ItemsSource = clipboard.Entries;
         DownloadsList.ItemsSource = downloads.Entries;
@@ -57,6 +60,7 @@ public partial class MainWindow : Window
         Loaded += async (_, _) => { SetExpanded(false); PositionIsland(); await RefreshAsync(); };
         timer.Tick += async (_, _) => { UpdateFullscreenVisibility(); await RefreshAsync(); };
         timer.Start();
+        clipboardRetry.Tick += (_, _) => CaptureClipboard();
         collapseTimer.Tick += (_, _) =>
         {
             collapseTimer.Stop();
@@ -94,10 +98,12 @@ public partial class MainWindow : Window
         }
         // Let WPF handle DPI changes, then reapply placement using the updated window DPI.
         if (message is 0x02E0 or 0x001A) Dispatcher.BeginInvoke(PositionIsland);
-        if (message == NativeMethods.ClipboardUpdate && settings.ClipboardEnabled && !sessionLocked) clipboard.Capture(hwnd);
+        if (message == NativeMethods.ClipboardUpdate)
+        { clipboardAttempts = 0; clipboardRetry.Stop(); CaptureClipboard(); }
         if (message == NativeMethods.Hotkey && wParam.ToInt32() == 1)
         {
-            RevealIsland(); pinned = !expanded; SetExpanded(!expanded); Activate(); handled = true;
+            var open = IslandInteraction.ExpandOnHotkey(IsVisible, expanded);
+            RevealIsland(); pinned = open; SetExpanded(open); if (open) Activate(); handled = true;
         }
         return IntPtr.Zero;
     }
@@ -114,11 +120,25 @@ public partial class MainWindow : Window
             PageArea.Height = Math.Max(80, (settings.WideLayout ? 460 : ExpandedHeight) - 170);
             // Constrain the content as well as the HWND on short work areas.
             if (expanded) PageArea.Height = Math.Max(40, Height - 170);
+            UpdateResponsiveLayout();
             Island.CornerRadius = settings.FloatingIsland ? new CornerRadius(24) : new CornerRadius(0, 0, 26, 26);
             if (!NativeMethods.SetWindowPos(handle, IntPtr.Zero, placement.Left, placement.Top, placement.Width, placement.Height, 0x0014))
                 Status.Text = "Couldn't position the island. Choose a display in Settings to try again.";
         }
         finally { positioning = false; }
+    }
+    private void UpdateResponsiveLayout()
+    {
+        var overview = IslandInteraction.ShowOverview(Width);
+        OverviewCard.Visibility = overview ? Visibility.Visible : Visibility.Collapsed;
+        OverviewColumn.Width = overview ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+        TabBar.Width = IslandInteraction.NavigationWidth(Width);
+    }
+    private void CaptureClipboard()
+    {
+        clipboardRetry.Stop();
+        if (quitting || sessionLocked || !settings.ClipboardEnabled) return;
+        if (!clipboard.Capture(handle) && ++clipboardAttempts < 5) clipboardRetry.Start();
     }
     private void DisplayChanged(object? sender, EventArgs e) => Dispatcher.BeginInvoke(() => { RefreshDisplayChoices(); PositionIsland(); });
     private void RefreshDisplayChoices()
@@ -143,12 +163,12 @@ public partial class MainWindow : Window
     private void RevealIsland()
     {
         userHidden = hiddenForFullscreen = false;
-        fullscreenGraceUntil = DateTime.UtcNow.AddSeconds(8);
+        fullscreenGraceUntil = Environment.TickCount64 + 8_000;
         Show();
     }
     private void UpdateFullscreenVisibility()
     {
-        if (handle == IntPtr.Zero || userHidden || sessionLocked || quitting || DateTime.UtcNow < fullscreenGraceUntil) return;
+        if (handle == IntPtr.Zero || userHidden || sessionLocked || quitting || Environment.TickCount64 < fullscreenGraceUntil) return;
         var shouldHide = settings.HideForFullscreen && DesktopService.IsForegroundFullscreen(handle, settings.DisplayDevice);
         if (shouldHide && !hiddenForFullscreen) { hiddenForFullscreen = true; Hide(); }
         else if (!shouldHide && hiddenForFullscreen) { hiddenForFullscreen = false; Show(); PositionIsland(); }
@@ -157,7 +177,7 @@ public partial class MainWindow : Window
     {
         Dispatcher.BeginInvoke(() =>
         {
-            if (e.Reason == SessionSwitchReason.SessionLock) { sessionLocked = true; clipboard.Clear(); }
+            if (e.Reason == SessionSwitchReason.SessionLock) { sessionLocked = true; clipboardRetry.Stop(); clipboard.Clear(); }
             else if (e.Reason == SessionSwitchReason.SessionUnlock) sessionLocked = false;
         });
     }
@@ -282,7 +302,7 @@ public partial class MainWindow : Window
         catch (ExternalException) { Status.Text = "Clipboard is busy. Try again."; }
         ClipboardList.SelectedItem = null;
     }
-    private void ClearClipboard(object sender, RoutedEventArgs e) => clipboard.Clear();
+    private void ClearClipboard(object sender, RoutedEventArgs e) { clipboardRetry.Stop(); clipboard.Clear(); }
     private void UpdateClipboardHint() => ClipboardHint.Text = settings.ClipboardEnabled ? "Click an item to copy again. History stays in memory." : "Enable clipboard history in Settings to start recording.";
     private void SaveSettings(object sender, RoutedEventArgs e)
     {
@@ -292,7 +312,7 @@ public partial class MainWindow : Window
         settings.WideLayout = WideToggle.IsChecked == true;
         settings.FloatingIsland = FloatingToggle.IsChecked == true;
         settings.HideForFullscreen = FullscreenToggle.IsChecked == true;
-        if (!settings.ClipboardEnabled) clipboard.Clear();
+        if (!settings.ClipboardEnabled) { clipboardRetry.Stop(); clipboard.Clear(); }
         UpdateClipboardHint();
         UpdateEmptyStates();
         if (!settings.DownloadsEnabled) downloads.Entries.Clear();
@@ -354,7 +374,7 @@ public partial class MainWindow : Window
     private void ShutdownApp(int code)
     {
         quitting = true;
-        timer.Stop(); collapseTimer.Stop(); clipboard.Clear();
+        timer.Stop(); collapseTimer.Stop(); clipboardRetry.Stop(); clipboard.Clear();
         SystemEvents.DisplaySettingsChanged -= DisplayChanged;
         SystemEvents.SessionSwitch -= SessionChanged;
         NativeMethods.RemoveClipboardFormatListener(handle);
@@ -366,10 +386,13 @@ public partial class MainWindow : Window
 
     internal async Task RunSmokeTestAsync(string output)
     {
-        timer.Stop(); collapseTimer.Stop();
+        timer.Stop(); collapseTimer.Stop(); clipboardRetry.Stop();
         settings.WideLayout = false;
         settings.HideForFullscreen = false;
         settings.DisplayDevice = "";
+        settings.ClipboardEnabled = false;
+        WideToggle.IsChecked = FullscreenToggle.IsChecked = ClipboardToggle.IsChecked = false;
+        clipboard.Clear(); UpdateClipboardHint(); UpdateEmptyStates(); RefreshDisplayChoices();
         SetExpanded(false);
         await RefreshAsync();
         if (Math.Abs(Height - DesktopService.Place(handle, settings, false).LogicalHeight) > 1 || Expanded.Visibility != Visibility.Collapsed)
@@ -428,12 +451,18 @@ public partial class MainWindow : Window
         finally { if (Directory.Exists(fixture)) Directory.Delete(fixture, true); }
         ShowPage("Home");
         Width = 600;
+        UpdateResponsiveLayout();
         UpdateLayout();
+        if (OverviewCard.Visibility != Visibility.Collapsed) throw new InvalidOperationException("Narrow layout didn't prioritize the media player.");
         var narrow = new RenderTargetBitmap(600, (int)ActualHeight, 96, 96, PixelFormats.Pbgra32);
         narrow.Render(this);
         var narrowEncoder = new PngBitmapEncoder();
         narrowEncoder.Frames.Add(BitmapFrame.Create(narrow));
         using (var narrowFile = File.Create(Path.Combine(output, "HomeNarrow.png"))) narrowEncoder.Save(narrowFile);
+        Width = 420; UpdateResponsiveLayout(); UpdateLayout();
+        if (NavigationViewport.ScrollableWidth <= 0) throw new InvalidOperationException("Narrow navigation must scroll instead of clipping tabs.");
+        PageArea.Height = 100; UpdateLayout();
+        if (HomePage.ScrollableHeight <= 0) throw new InvalidOperationException("Short screens must allow access to the full media card.");
         settings.WideLayout = true;
         settings.DisplayDevice = "Tisa-test-disconnected-display";
         PositionIsland();
@@ -451,6 +480,11 @@ public partial class MainWindow : Window
         using (var desktopFile = File.Create(Path.Combine(output, "DesktopWide.png"))) desktopEncoder.Save(desktopFile);
         settings.WideLayout = false;
         settings.DisplayDevice = "";
+        SetExpanded(true); Hide();
+        var hotkeyHandled = false;
+        WindowMessage(handle, NativeMethods.Hotkey, new IntPtr(1), IntPtr.Zero, ref hotkeyHandled);
+        if (!hotkeyHandled || !expanded || !IsVisible) throw new InvalidOperationException("Hotkey didn't reopen the hidden expanded island.");
+        pinned = false;
         TogglePin(this, new RoutedEventArgs());
         if (!pinned || !expanded) throw new InvalidOperationException("Pin must keep the island open.");
         TogglePin(this, new RoutedEventArgs());

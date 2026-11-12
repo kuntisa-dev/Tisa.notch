@@ -1,3 +1,25 @@
+# Windows 0.3.1
+
+- Fixed hotkey reopening of an island hidden while expanded.
+- Narrow windows now scroll the tabs and prioritize the player; short Home pages
+  scroll instead of clipping the playback controls.
+- Added bounded clipboard retries for transient contention, validation of the native
+  clipboard privacy-format data size, and graceful skipping of malformed image data.
+- Slow/unavailable Downloads folders time out, with one filesystem scan in flight;
+  they no longer stall updates or create an ever-growing queue of blocked scans.
+- Explicit null display preferences recover to the primary display. Manual full-screen
+  grace uses monotonic time so a system-clock change cannot extend it indefinitely.
+- Regression coverage now includes 10,000 randomized screen layouts and tests of the
+  real Downloads service's timeout, retry, recovery and unchanged-item behavior.
+- Bundled Test-Windows.cmd runs native checks on a Windows 11 x64 PC and saves local
+  screenshots/results plus an acceptance checklist. It leaves saved preferences alone,
+  disables clipboard capture for the test, and uploads nothing.
+
+The local regression suite and compile checks passed. Native checks for this version
+are prepared for the user's Windows PC; they have not yet run. GitHub Actions remains
+blocked by billing. Neither these changes nor the automated geometry tests establish
+that all Windows interactions and hardware combinations are verified.
+
 # Windows 0.3.0
 
 ## Desktop and monitor support

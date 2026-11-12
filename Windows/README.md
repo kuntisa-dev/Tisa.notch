@@ -84,6 +84,18 @@ is available; PC fans are not described as a macOS-only feature.
 
 ## Validation
 
+To test on your own Windows PC, unzip the full portable build, quit any existing
+instance from the tray menu, then double-click **Test-Windows.cmd**. It runs the
+native startup/page/placement checks and writes `result.txt`, app screenshots and
+a manual checklist to a `Tisa-Windows-Test-*` folder on your Desktop. A ZIP of the
+results is created next to it. The test does not upload files, save preference changes,
+or enable clipboard history. Review screenshots before sharing because current media
+titles may appear. No administrator access or .NET SDK is required for the portable test.
+
+The automatic checks do not replace the included browser, media, clipboard, monitor,
+full-screen and lock/unlock checklist. Report the failing step and expected/actual
+behavior together with the relevant screenshot or `result.txt`.
+
 Download-file classification tests can run on macOS or Windows:
 
 ```powershell
@@ -96,6 +108,9 @@ checks also cover folder recovery, unchanged list stability, selected tabs, pinn
 collapsing and scrollable support notes. The regression suite also checks 240 combinations
 of display geometry, scaling, layout size and floating/attached placement, plus full-screen
 bounds detection. Screenshots include a narrower 600 px layout.
+It also exercises 10,000 seeded randomized screen geometries, all hotkey visibility
+states, and the actual asynchronous Downloads service through stalled scans, retry,
+recovery, list stability and folder deletion/recreation.
 The GitHub workflow builds and packages on a Windows runner. A macOS cross-build
 checks compilation but cannot verify native Windows behavior; test on a real Windows
 11 PC before treating any feature as ready to distribute.
