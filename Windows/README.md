@@ -14,7 +14,7 @@ The Swift app remains in the repository and builds independently.
 ## Download and install
 
 1. On your Windows PC, open [Windows v0.3.1 on GitHub Releases](https://github.com/kuntisa-dev/Tisa.notch/releases/tag/windows-v0.3.1).
-   Sign in to a GitHub account that has access to this private repository.
+   The repository and release downloads are public; no collaborator invitation is required.
 2. Under **Assets**, download **TisaDynamicIsland-windows-x64-0.3.1.zip**.
    The **Source code** ZIP and tarball are for developers; they are not the app download.
 3. In File Explorer, right-click the Windows ZIP and choose **Extract All**.
@@ -46,7 +46,7 @@ pending. Camera, calendar/routines, AI usage and fan control are not included ye
 
 ### If you cannot find or open it
 
-- A GitHub **404** for the private release usually means your signed-in account lacks repository access.
+- If a release link fails, open the repository’s **Releases** page and select **Windows v0.3.1**.
 - If another instance is running, launching again brings that existing island back. Check the tray icon.
 - If the shortcut is unavailable, use the tray menu to open the island; Settings explains shortcut conflicts.
 - This package targets Windows 11 **x64**, not ARM64, macOS or Linux.
