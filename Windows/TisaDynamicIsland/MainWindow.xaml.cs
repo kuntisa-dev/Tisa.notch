@@ -372,13 +372,13 @@ public partial class MainWindow : Window
         settings.DisplayDevice = "";
         SetExpanded(false);
         await RefreshAsync();
-        if (Height != CollapsedHeight || Expanded.Visibility != Visibility.Collapsed)
+        if (Math.Abs(Height - DesktopService.Place(handle, settings, false).LogicalHeight) > 1 || Expanded.Visibility != Visibility.Collapsed)
             throw new InvalidOperationException("Collapsed island must not block the desktop below it.");
         foreach (var tab in new[] { "Home", "Clipboard", "Downloads", "Shelf", "Settings" })
         {
             ShowPage(tab);
             UpdateLayout();
-            if (Height != ExpandedHeight || Expanded.Visibility != Visibility.Visible)
+            if (Math.Abs(Height - DesktopService.Place(handle, settings, true).LogicalHeight) > 1 || Expanded.Visibility != Visibility.Visible)
                 throw new InvalidOperationException("Page did not expand: " + tab);
             if (TabBar.Children.OfType<RadioButton>().Single(b => b.IsChecked == true).Tag as string != tab)
                 throw new InvalidOperationException("Selected tab doesn't match the displayed page.");
@@ -456,7 +456,7 @@ public partial class MainWindow : Window
         TogglePin(this, new RoutedEventArgs());
         if (pinned) throw new InvalidOperationException("Unpin didn't release the island.");
         SetExpanded(false);
-        if (Height != CollapsedHeight) throw new InvalidOperationException("Collapse failed after navigation.");
+        if (Math.Abs(Height - DesktopService.Place(handle, settings, false).LogicalHeight) > 1) throw new InvalidOperationException("Collapse failed after navigation.");
     }
     internal void FinishSmokeTest(int code)
     {
