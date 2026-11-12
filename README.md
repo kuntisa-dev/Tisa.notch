@@ -26,6 +26,9 @@ Added in Tisa Dynamic Island (details in [CUSTOM_FEATURES.md](CUSTOM_FEATURES.md
 
 ## Requirements
 
+**Windows version:** a native Windows 11 port is in early development. See
+[Windows build instructions and current status](Windows/README.md). It does not yet match all Mac features.
+
 - macOS 14 Sonoma or later to run
 - macOS 15.6 or later and Xcode 26 or later to build
 
