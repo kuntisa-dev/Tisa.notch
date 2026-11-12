@@ -133,6 +133,9 @@ public partial class MainWindow : Window
         OverviewCard.Visibility = overview ? Visibility.Visible : Visibility.Collapsed;
         OverviewColumn.Width = overview ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
         TabBar.Width = IslandInteraction.NavigationWidth(Width);
+        var scrollingTabs = Width - 28 < TabBar.Width;
+        NavigationViewport.Height = scrollingTabs ? 64 : 44;
+        if (expanded) PageArea.Height = Math.Max(40, Height - 170 - (scrollingTabs ? 20 : 0));
     }
     private void CaptureClipboard()
     {
@@ -259,7 +262,11 @@ public partial class MainWindow : Window
         DownloadsPage.Visibility = tab == "Downloads" ? Visibility.Visible : Visibility.Collapsed;
         ShelfPage.Visibility = tab == "Shelf" ? Visibility.Visible : Visibility.Collapsed;
         SettingsPage.Visibility = tab == "Settings" ? Visibility.Visible : Visibility.Collapsed;
-        foreach (var button in TabBar.Children.OfType<RadioButton>()) button.IsChecked = (string)button.Tag == tab;
+        foreach (var button in TabBar.Children.OfType<RadioButton>())
+        {
+            button.IsChecked = (string)button.Tag == tab;
+            if (button.IsChecked == true) button.BringIntoView();
+        }
         Status.Text = "Ctrl + 1–5 to switch tabs · Escape to collapse";
     }
     private async void MediaCommand(object sender, RoutedEventArgs e)
@@ -461,6 +468,7 @@ public partial class MainWindow : Window
         using (var narrowFile = File.Create(Path.Combine(output, "HomeNarrow.png"))) narrowEncoder.Save(narrowFile);
         Width = 420; UpdateResponsiveLayout(); UpdateLayout();
         if (NavigationViewport.ScrollableWidth <= 0) throw new InvalidOperationException("Narrow navigation must scroll instead of clipping tabs.");
+        if (NavigationViewport.ViewportHeight < 44) throw new InvalidOperationException("Horizontal scrollbar clipped the tab buttons vertically.");
         PageArea.Height = 100; UpdateLayout();
         if (HomePage.ScrollableHeight <= 0) throw new InvalidOperationException("Short screens must allow access to the full media card.");
         settings.WideLayout = true;
