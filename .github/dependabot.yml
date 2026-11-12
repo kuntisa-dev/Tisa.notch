@@ -6,6 +6,10 @@
 version: 2
 updates:
   - package-ecosystem: "github-actions" # See documentation for possible values
+    groups:
+      codeql:
+        patterns:
+          - "github/codeql-action/*"
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
