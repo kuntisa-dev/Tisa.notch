@@ -64,12 +64,25 @@
       <DockPanel><Button Content="Clear shelf" Click="ClearShelf" DockPanel.Dock="Right"/><TextBlock Text="Drop files here • double-click to open • drag to another app" VerticalAlignment="Center"/></DockPanel>
       <ListBox x:Name="ShelfList" Grid.Row="1" MouseDoubleClick="OpenShelfItem" PreviewMouseLeftButtonDown="BeginShelfDrag" PreviewMouseMove="DragShelfItem"/>
      </Grid>
-     <StackPanel x:Name="SettingsPage" Visibility="Collapsed">
+     <ScrollViewer x:Name="SettingsPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Margin="0,0,8,0">
       <CheckBox x:Name="ClipboardToggle" Content="Keep clipboard history in memory" Foreground="White" Margin="6" Click="SaveSettings"/>
       <CheckBox x:Name="DownloadsToggle" Content="Watch the Downloads folder" Foreground="White" Margin="6" Click="SaveSettings"/>
       <CheckBox x:Name="HoverToggle" Content="Expand on hover" Foreground="White" Margin="6" Click="SaveSettings"/>
       <TextBlock Text="Ctrl + Alt + Space toggles the island. Right-click the tray icon to quit." Opacity="0.6" FontSize="12" Margin="6,12,0,0"/>
-     </StackPanel>
+      <Expander x:Name="FeatureAvailability" Header="Feature availability on Windows" Foreground="White" Margin="6,12,0,4">
+       <StackPanel Margin="8,10,8,8">
+        <TextBlock Text="Only available Windows features appear in the tabs and settings." TextWrapping="Wrap" Margin="0,0,0,12"/>
+        <TextBlock Text="macOS only" Foreground="{StaticResource Accent}" FontWeight="SemiBold"/>
+        <TextBlock Text="AirDrop, Apple's Liquid Glass material and Apple SMC fan control are macOS features. They are not included on Windows." TextWrapping="Wrap" Opacity="0.75" Margin="0,4,0,12"/>
+        <TextBlock Text="Not yet in this Windows build" Foreground="{StaticResource Accent}" FontWeight="SemiBold"/>
+        <TextBlock Text="Photo Booth, camera effects, Khmer calendar and routines, AI usage, editable Home widgets, microphone controls and advanced audio controls are not yet available. Their controls are hidden." TextWrapping="Wrap" Opacity="0.75" Margin="0,4,0,12"/>
+        <TextBlock Text="PC fan control" Foreground="{StaticResource Accent}" FontWeight="SemiBold"/>
+        <TextBlock Text="PC fan support depends on your hardware. Fan controls are hidden in this build until support for your PC is available." TextWrapping="Wrap" Opacity="0.75" Margin="0,4,0,0"/>
+       </StackPanel>
+      </Expander>
+      </StackPanel>
+     </ScrollViewer>
     </Grid>
     <TextBlock x:Name="Status" FontSize="11" Foreground="{StaticResource Accent}" TextTrimming="CharacterEllipsis" Margin="4,12,0,0"/>
    </StackPanel>
