@@ -15,11 +15,11 @@ permissions:
   contents: read
 
 env:
-  PROJECT_NAME: boringNotch
-  APP_NAME: Boring Notch
+  PROJECT_NAME: TisaDynamicIsland
+  APP_NAME: Tisa Dynamic Island
   NIGHTLY_BRANCH: dev
   TAG: nightly
-  ASSET_NAME: boringNotch-nightly.dmg
+  ASSET_NAME: TisaDynamicIsland-nightly.dmg
   TITLE: Latest Nightly
   APPCAST_FILE: appcast-dev.xml
   CAUTION_WARNING: >-
@@ -166,7 +166,7 @@ jobs:
           name: ${{ env.PROJECT_NAME }}.dmg
           path: Release
 
-      # The stable DMG keeps the legacy boringNotch.dmg asset name for
+      # The stable DMG keeps the legacy TisaDynamicIsland.dmg asset name for
       # compatibility; the nightly channel ships it under a fixed rolling name.
       - name: Rename DMG to the rolling nightly name
         run: mv "Release/${PROJECT_NAME}.dmg" "Release/${ASSET_NAME}"
