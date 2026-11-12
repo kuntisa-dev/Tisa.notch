@@ -15,22 +15,24 @@
      <TextBlock x:Name="CompactTitle" Text="Tisa Dynamic Island" TextTrimming="CharacterEllipsis"/>
     </Button>
     <StackPanel Grid.Column="2" Orientation="Horizontal">
-     <TextBlock x:Name="Battery" FontSize="11" VerticalAlignment="Center" Margin="8,0" Foreground="#A7B5C4"/>
+     <TextBlock x:Name="Battery" FontSize="11" VerticalAlignment="Center" Margin="8,0" Foreground="#A7B5C4" MaxWidth="110" TextTrimming="CharacterEllipsis"/>
      <Button x:Name="PinButton" Content="Pin" Click="TogglePin" Padding="8,4" ToolTip="Keep the island open" AutomationProperties.Name="Pin island open"/>
      <Button x:Name="CollapseButton" Content="⌄" Click="ToggleExpanded" Padding="8,4" ToolTip="Expand or collapse" AutomationProperties.Name="Expand or collapse"/>
     </StackPanel>
    </Grid>
    <StackPanel x:Name="Expanded" Visibility="Collapsed">
-    <UniformGrid x:Name="TabBar" Columns="5" Margin="0,12,0,12">
+    <ScrollViewer x:Name="NavigationViewport" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Height="48" Margin="0,12,0,12" AutomationProperties.Name="Page navigation">
+    <UniformGrid x:Name="TabBar" Columns="5">
      <RadioButton Content="Home" Tag="Home" GroupName="Page" Style="{StaticResource Tab}" IsChecked="True" Checked="SelectTab"/>
      <RadioButton Content="Clipboard" Tag="Clipboard" GroupName="Page" Style="{StaticResource Tab}" Checked="SelectTab"/>
      <RadioButton Content="Downloads" Tag="Downloads" GroupName="Page" Style="{StaticResource Tab}" Checked="SelectTab"/>
      <RadioButton Content="Shelf" Tag="Shelf" GroupName="Page" Style="{StaticResource Tab}" Checked="SelectTab"/>
      <RadioButton Content="Settings" Tag="Settings" GroupName="Page" Style="{StaticResource Tab}" Checked="SelectTab"/>
-    </UniformGrid>
+    </UniformGrid></ScrollViewer>
     <Grid Height="250" x:Name="PageArea">
-     <Grid x:Name="HomePage">
-      <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition/></Grid.ColumnDefinitions>
+     <ScrollViewer x:Name="HomePage" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+     <Grid MinHeight="250">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition x:Name="OverviewColumn"/></Grid.ColumnDefinitions>
       <Border Background="#283B4B59" CornerRadius="18" Padding="18" Margin="0,0,12,0">
        <StackPanel>
         <TextBlock Text="NOW PLAYING" Foreground="{StaticResource Accent}" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,18"/>
@@ -50,14 +52,14 @@
         </StackPanel>
        </StackPanel>
       </Border>
-      <Border Grid.Column="1" Background="#20374653" CornerRadius="18" Padding="16">
+      <Border x:Name="OverviewCard" Grid.Column="1" Background="#20374653" CornerRadius="18" Padding="16">
        <StackPanel><TextBlock Text="YOUR DAY" FontSize="10" Foreground="{StaticResource Accent}" FontWeight="SemiBold"/>
         <TextBlock x:Name="Today" FontSize="22" FontWeight="SemiBold" Margin="0,12,0,12"/>
         <TextBlock x:Name="Summary" TextWrapping="Wrap" Foreground="#A7B5C4" LineHeight="23"/>
         <Button Content="Open Downloads" Click="OpenDownloads" Margin="0,14,0,0"/>
        </StackPanel>
       </Border>
-     </Grid>
+     </Grid></ScrollViewer>
      <Grid x:Name="ClipboardPage" Visibility="Collapsed">
       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/></Grid.RowDefinitions>
       <DockPanel Margin="0,0,0,8"><Button x:Name="ClearClipboardButton" Content="Clear history" Click="ClearClipboard" DockPanel.Dock="Right"/>

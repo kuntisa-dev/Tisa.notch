@@ -23,6 +23,11 @@ jobs:
         run: dotnet run --project Windows/TisaDynamicIsland.Tests -c Release
       - name: Build portable Windows app
         run: dotnet publish Windows/TisaDynamicIsland -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o artifacts/windows-x64
+      - name: Include local Windows test runner
+        shell: pwsh
+        run: |
+          Copy-Item Windows/Test-Windows.cmd, Windows/Test-Windows.ps1, Windows/WINDOWS-TEST-CHECKLIST.txt artifacts/windows-x64/
+          Copy-Item LICENSE artifacts/windows-x64/LICENSE.txt
       - name: Exercise native window and render all pages
         shell: pwsh
         run: |

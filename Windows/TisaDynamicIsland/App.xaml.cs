@@ -16,9 +16,10 @@ public partial class App : Application
             NativeMethods.PostMessage(new IntPtr(0xFFFF), NativeMethods.ShowIslandMessage, IntPtr.Zero, IntPtr.Zero);
             Shutdown(); return;
         }
-        MainWindow = new MainWindow();
+        var smokeTest = e.Args.Length == 2 && e.Args[0] == "--smoke-test";
+        MainWindow = new MainWindow(smokeTest);
         MainWindow.Show();
-        if (e.Args.Length == 2 && e.Args[0] == "--smoke-test")
+        if (smokeTest)
         {
             var output = Path.GetFullPath(e.Args[1]);
             Directory.CreateDirectory(output);

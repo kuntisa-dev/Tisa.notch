@@ -20,7 +20,12 @@ public static class SettingsStore
         "TisaDynamicIsland", "settings.json");
     public static UserSettings Load()
     {
-        try { return JsonSerializer.Deserialize<UserSettings>(File.ReadAllText(FilePath)) ?? new(); }
+        try
+        {
+            var settings = JsonSerializer.Deserialize<UserSettings>(File.ReadAllText(FilePath)) ?? new();
+            settings.DisplayDevice ??= "";
+            return settings;
+        }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException) { return new(); }
     }
     public static void Save(UserSettings settings)
