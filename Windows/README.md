@@ -13,9 +13,9 @@ The Swift app remains in the repository and builds independently.
 
 ## Download and install
 
-1. On your Windows PC, open [Windows v0.3.1 on GitHub Releases](https://github.com/kuntisa-dev/Tisa.notch/releases/tag/windows-v0.3.1).
+1. On your Windows PC, open [Windows v0.3.2 on GitHub Releases](https://github.com/kuntisa-dev/Tisa.notch/releases/tag/windows-v0.3.2).
    The repository and release downloads are public; no collaborator invitation is required.
-2. Under **Assets**, download **TisaDynamicIsland-windows-x64-0.3.1.zip**.
+2. Under **Assets**, download **TisaDynamicIsland-windows-x64-0.3.2.zip**.
    The **Source code** ZIP and tarball are for developers; they are not the app download.
 3. In File Explorer, right-click the Windows ZIP and choose **Extract All**.
    Do not launch the app from inside the ZIP. Keep all extracted files together in a folder
@@ -30,8 +30,8 @@ The Swift app remains in the repository and builds independently.
 You may create a desktop shortcut to the extracted executable. Keep the actual app folder
 in place when using that shortcut. The app does not currently start automatically with Windows.
 
-This is an unsigned development prerelease, and native Windows acceptance checks remain
-pending. Camera, calendar/routines, AI usage and fan control are not included yet.
+This is an unsigned development prerelease. Automated native Windows startup, page rendering
+and placement checks passed; real-device acceptance checks remain pending. Camera, calendar/routines, AI usage and fan control are not included yet.
 
 ### Update, quit and remove
 
@@ -46,7 +46,7 @@ pending. Camera, calendar/routines, AI usage and fan control are not included ye
 
 ### If you cannot find or open it
 
-- If a release link fails, open the repository’s **Releases** page and select **Windows v0.3.1**.
+- If a release link fails, open the repository’s **Releases** page and select **Windows v0.3.2**.
 - If another instance is running, launching again brings that existing island back. Check the tray icon.
 - If the shortcut is unavailable, use the tray menu to open the island; Settings explains shortcut conflicts.
 - This package targets Windows 11 **x64**, not ARM64, macOS or Linux.
