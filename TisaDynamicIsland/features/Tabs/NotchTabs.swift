@@ -3,7 +3,7 @@
 //  TisaDynamicIsland
 //
 //  Which tabs the notch shows, and in what order. Home is always first; the rest are
-//  picked in Edit Tabs (hold or right-click the tab bar). Only as many fit as there is
+//  picked in Edit Tabs (right-click the tab bar). Only as many fit as there is
 //  room for next to the camera: 7 in the Large notch, 6 in Standard.
 //
 

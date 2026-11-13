@@ -265,7 +265,7 @@ struct HomeSettings: View {
             } header: {
                 Text("Tabs (\(NotchTab.visible.count + 1) of \(NotchTab.maxVisible + 1), Home included)")
             } footer: {
-                Text("Only \(NotchTab.maxVisible + 1) tabs fit next to the camera. To change the order, hold or right-click the tab bar in the notch and drag the tabs. Shelf, Clipboard and Photo Booth also need their feature turned on in their own settings page.")
+                Text("Only \(NotchTab.maxVisible + 1) tabs fit next to the camera. To change the order, right-click the tab bar in the notch and drag the tabs. Shelf, Clipboard and Photo Booth also need their feature turned on in their own settings page.")
             }
 
             Section {

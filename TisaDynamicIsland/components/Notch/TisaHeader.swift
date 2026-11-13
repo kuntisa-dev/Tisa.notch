@@ -16,14 +16,17 @@ struct TisaHeader: View {
     @ObservedObject var homeEditor = HomeEditor.shared
     var body: some View {
         HStack(spacing: 0) {
-            HStack {
-                if ((!tvm.isEmpty || coordinator.alwaysShowTabs) && Defaults[.tisaShelf]) || tabs.count > 1 {
-                    TabSelectionView()
-                } else if vm.notchState == .open {
-                    EmptyView()
+            GeometryReader { geo in
+                HStack {
+                    if ((!tvm.isEmpty || coordinator.alwaysShowTabs) && Defaults[.tisaShelf]) || tabs.count > 1 {
+                        TabSelectionView(availableWidth: geo.size.width)
+                    } else if vm.notchState == .open {
+                        EmptyView()
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity)
             .opacity(vm.notchState == .closed ? 0 : 1)
             .blur(radius: vm.notchState == .closed ? 20 : 0)
             .zIndex(2)

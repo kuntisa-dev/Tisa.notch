@@ -15,6 +15,9 @@ struct TabButton: View {
     var horizontalPadding: CGFloat = 12
     let onClick: () -> Void
 
+    /// Every icon gets the same width so the tab bar can work out what fits beside the camera.
+    static let iconWidth: CGFloat = 18
+
     @State private var hovering = false
 
     var body: some View {
@@ -22,6 +25,7 @@ struct TabButton: View {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: selected ? .bold : .semibold))
                 .symbolEffect(.bounce, value: selected)
+                .frame(width: Self.iconWidth)
                 .padding(.horizontal, horizontalPadding)
                 .frame(maxHeight: .infinity)
                 .contentShape(Capsule())
