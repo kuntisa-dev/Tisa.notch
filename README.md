@@ -4,6 +4,20 @@
 
 Tisa Dynamic Island is a personal fork of [Boring Notch](https://github.com/TheBoredTeam/boring.notch) by TheBoredTeam, with extra features and a Liquid Glass look.
 
+<p align="center"><img src="docs/screenshots/desktop.jpg" alt="Tisa Dynamic Island open on a MacBook, showing music, AI usage, fans and app shortcuts under the notch" width="900"></p>
+
+## Screenshots
+
+| Home | Edit Home |
+| --- | --- |
+| <img src="docs/screenshots/home.jpg" alt="Home tab with music, AI usage, CPU temperature, app shortcuts and quick buttons"> | <img src="docs/screenshots/edit-home.jpg" alt="Edit Home: drag to move, tap to change, drag the corner to resize tiles"> |
+| **Add a tile** | **Fans** |
+| <img src="docs/screenshots/add-tile.jpg" alt="Choosing a new Home tile with a live preview and size options"> | <img src="docs/screenshots/fans.jpg" alt="Fans tab with CPU and GPU temperature, fan speeds and Full Blast or Automatic mode"> |
+| **AI Usage** | **Settings** |
+| <img src="docs/screenshots/ai-usage.jpg" alt="AI Usage tab with Claude, Codex and Antigravity limits and reset times"> | <img src="docs/screenshots/settings.jpg" alt="Settings overview with Home, tabs, fan control and CPU status"> |
+| **Themes** | |
+| <img src="docs/screenshots/themes.jpg" alt="Theme picker with picture and glass themes"> | |
+
 ## Install on Mac
 
 You need a Mac running **macOS 15 Sequoia or later**. A Mac with a notch looks best, but
