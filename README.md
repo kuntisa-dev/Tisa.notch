@@ -4,101 +4,159 @@
 
 Tisa Dynamic Island is a personal fork of [Boring Notch](https://github.com/TheBoredTeam/boring.notch) by TheBoredTeam, with extra features and a Liquid Glass look.
 
-## Install and use on Mac
+## Install on Mac
 
-**macOS 15 Sequoia or later is required.** There is currently no ready-to-install Mac
-`.dmg` or `.zip` in this repository's [GitHub Releases](https://github.com/kuntisa-dev/Tisa.notch/releases).
-For now, Mac users need to build the app with Xcode. The Windows ZIP cannot run on macOS,
-and GitHub's **Source code** downloads are not runnable apps.
+You need a Mac running **macOS 15 Sequoia or later**. A Mac with a notch looks best, but
+any Mac works. There's no ready-made Mac download yet, so you build the app yourself.
+It takes about 15 minutes the first time, and you only copy and paste.
 
-### Build and install
+> The Windows ZIP doesn't run on a Mac, and GitHub's green **Code → Download ZIP**
+> button gives you source code, not an app. Follow the steps below instead.
 
-1. Install **Xcode 26 or later** from the Mac App Store or Apple Developer downloads.
-   Your Mac must run a macOS version supported by that Xcode release. Open Xcode once
-   to finish setup, then add your Apple ID in **Xcode → Settings → Accounts**.
-2. Download this repository using **Code → Download ZIP** and extract it, or run:
+### Step 1: Get Xcode (one time)
 
-   ```bash
-   git clone https://github.com/kuntisa-dev/Tisa.notch.git
-   cd Tisa.notch
-   ```
+1. Install **Xcode** (free) from the Mac App Store, then open it once and let it finish
+   installing its extra parts.
+2. In Xcode, go to **Xcode → Settings → Accounts**, click **+**, and sign in with your
+   Apple ID. A free Apple ID is fine.
+3. Still there, select your Apple ID → **Manage Certificates…** → **+** →
+   **Apple Development**. Close the window.
 
-3. Open **TisaDynamicIsland.xcodeproj** and wait for Swift packages to finish resolving.
-4. Select the project in Xcode's sidebar. Under **Signing & Capabilities**, choose your
-   own **Team** for **TisaDynamicIsland**, **TisaDynamicIslandXPCHelper** and **TisaFanHelper**.
-   Enable **Automatically manage signing** where available. If Xcode reports a bundle
-   identifier conflict, use your own unique identifiers for your local build.
-5. Choose the **TisaDynamicIsland** scheme and **My Mac** as the destination.
-   Quit Boring Notch or any older copy of Tisa Dynamic Island, then press **⌘R** to build
-   and try the app.
-6. To keep an installed copy, stop the Xcode run and choose **Product → Build**.
-   Find **Tisa Dynamic Island.app** under Xcode's **Products** group, right-click it →
-   **Show in Finder**, and copy it to **Applications**. Open it from Applications.
-   Keep only one running copy.
+### Step 2: Download and build the app
 
-For a signed Release build, including support for the optional fan-control helper,
-create an **Apple Development** certificate in **Xcode → Settings → Accounts →
-Manage Certificates**, then run this from the repository folder:
+Open **Terminal** (press ⌘ + Space, type `Terminal`, press Enter), then paste these
+lines one at a time and press Enter after each:
 
 ```bash
+cd ~/Downloads
+git clone https://github.com/kuntisa-dev/Tisa.notch.git
+cd Tisa.notch
 ./Scripts/build-release.sh
 ```
 
-Quit the running app, then copy `build/Build/Products/Release/Tisa Dynamic Island.app`
-to **Applications** and open it. Fan-speed changes require a separate one-time setup
-in **Tisa Fan Studio → Settings → Fan Control**; follow the install command shown there.
-Debug builds from ⌘R cannot control fan speeds.
+The last command takes a few minutes. When it prints **Built …**, it's done.
+If macOS asks to use your keychain, type your Mac password and click **Always Allow**.
 
-### First launch and everyday use
+### Step 3: Put it in Applications and open it
 
-1. Complete the welcome screen. The app lives at the top of your display and in the
-   menu bar; it does not need a Dock window to stay running.
-2. Hover over the notch to open it, or press **⌘⇧I** (Command + Shift + I).
-   Use the tabs to switch between music, Calendar, Shelf, Clipboard and Photo Booth.
-3. Click the **sparkle icon in the menu bar → Settings**. In **General**, choose your
-   preferred display and enable **Launch at login** if you want it to start automatically.
-   Use **Home & Tabs** to choose the tabs and Home tiles, and **Themes** to change its look.
-4. Play music in your usual music app to use playback controls. Drag files onto the
-   notch to use the Shelf. In **Calendar**, select a day to add notes or routines.
-5. To close the app, choose **Quit** from its menu bar icon.
+1. Quit **Boring Notch** or any older copy of Tisa Dynamic Island if one is running.
+2. Paste this into Terminal to copy the app into Applications and open it:
 
-Default shortcuts (customize them in **Settings → Shortcuts**):
+   ```bash
+   cp -R "build/Build/Products/Release/Tisa Dynamic Island.app" /Applications/
+   open "/Applications/Tisa Dynamic Island.app"
+   ```
+
+3. Finish the welcome screen. The app now lives at the top of your screen and in the
+   menu bar (sparkle icon). It doesn't need a Dock icon.
+
+To start it automatically, open **sparkle icon → Settings → General** and turn on
+**Launch at login**.
+
+## Using it
+
+- **Open the notch:** move the pointer onto the notch, or press **⌘ + Shift + I**.
+- **Switch tabs:** click the icons along the top-left of the open notch.
+  Hover over an icon to see its name.
+- **Choose and reorder tabs:** **right-click** the tab bar → **Edit Tabs…**. Drag to
+  reorder, **−** to remove, **+** to add. The tab bar fits itself to your notch, so it
+  shows a few fewer tabs on a Mac with a wider notch.
+- **Edit Home:** on the Home tab, click the pencil button at the top right.
+- **Music:** play something in Apple Music, Spotify or another player. The controls
+  appear in the notch.
+- **Shelf:** drag files onto the notch to keep them handy.
+- **Calendar:** pick a day to add notes or routines.
+- **Settings:** **sparkle icon → Settings**. Use **Home & Tabs** for tabs and tiles,
+  and **Themes** for the look.
+- **Quit:** **sparkle icon → Quit**.
+
+Keyboard shortcuts (change them in **Settings → Shortcuts**):
 
 | Action | Shortcut |
 | --- | --- |
-| Open or close the notch | Command + Shift + I |
+| Open or close the notch | ⌘ + Shift + I |
 | Clipboard history | Control + Option + V |
 | Mute or unmute the microphone | Control + Option + M |
 | Photo Booth | Control + Option + P |
 | Khmer stamp booth | Control + Option + K |
 
-### Permissions and troubleshooting
+## Fan control (optional)
 
-Allow permissions when you use the corresponding feature: **Camera** for the mirror
-and Photo Booth, **Calendars/Reminders** for Apple events and reminders, **Notifications**
-for alerts, **Automation** for music-app control, and folder access for downloads or
-saved photos. If macOS asks for **Microphone** access, it supports the microphone feature.
-The audio-reactive visualizer also needs **Screen & System Audio Recording** access;
-restart the app after granting it. Review these in **System Settings → Privacy & Security**
-or **System Settings → Notifications**.
+The **Fans** tab shows temperatures and fan speeds right away. To *change* fan speeds,
+do this once:
 
-- **Nothing appears:** quit other notch apps, open Tisa Dynamic Island again, then
-  check **Settings → General → Preferred display** and try **⌘⇧I**.
-- **A feature is missing:** enable it in Settings and check **Home & Tabs** to show its tab.
-- **Signing fails:** check that all three targets use your own team and that Xcode has
-  a valid Apple Development certificate. Retry after Swift packages finish resolving.
-- **macOS blocks a downloaded copy:** only if you trust its source, try opening it,
-  then use **System Settings → Privacy & Security → Open Anyway** if offered.
-  If a trusted copy is still blocked by quarantine, run:
+1. Click the **sparkle icon in the menu bar → Tisa Fan Studio**.
+2. Go to **Settings → Fan Control** and click **Copy install command**.
+3. Paste it into Terminal and press Enter. Type your Mac password when asked.
+   Nothing appears while you type; that's normal.
+4. Go back to Fan Studio and click **Reconnect**. The dot turns **green** when it works.
 
-  ```bash
-  xattr -dr com.apple.quarantine "/Applications/Tisa Dynamic Island.app"
-  ```
+Fan speeds always stay within the range your Mac allows. When the app quits, your fans
+go back to normal macOS control. To remove fan control later, click
+**Copy removal command** on the same screen and run it in Terminal.
 
-To update this Mac build, download or pull the latest source, rebuild, quit the old app,
-and replace the copy in Applications. The current **Check for Updates** menu item points
-to upstream Boring Notch, so use this repository for Tisa updates. To uninstall, quit the
-app and move **Tisa Dynamic Island.app** from Applications to the Trash.
+**Dot stays orange?** Fan control only works with the app built by
+`build-release.sh` (Step 2) and opened from **Applications**. Copies started from
+Xcode's ▶ Run button can't control fans.
+
+## Permissions
+
+macOS asks for each permission the first time you use the feature that needs it.
+Click **Allow**:
+
+| Permission | Used for |
+| --- | --- |
+| Camera | Mirror and Photo Booth |
+| Calendars / Reminders | Your events and reminders |
+| Notifications | Alerts and routine reminders |
+| Automation | Controlling your music app |
+| Screen & System Audio Recording | The music visualizer (restart the app after allowing) |
+
+You can change these later in **System Settings → Privacy & Security**.
+
+## Updating
+
+Open Terminal and run:
+
+```bash
+cd ~/Downloads/Tisa.notch
+git pull
+./Scripts/build-release.sh
+```
+
+Quit the app, then repeat **Step 3**. Your settings stay. Fan control keeps working
+without reinstalling. (Use this repository for updates; the app's **Check for Updates**
+menu item points to the original Boring Notch.)
+
+> **Cloned before 13 November 2026?** The repository history was cleaned up, so
+> `git pull` will fail. Delete your old **Tisa.notch** folder and start again from Step 2.
+
+## Troubleshooting
+
+- **Nothing appears:** quit other notch apps, open Tisa Dynamic Island again, press
+  **⌘ + Shift + I**, and check **Settings → General → Preferred display**.
+- **A tab is missing:** turn the feature on in Settings, then add its tab with
+  **right-click the tab bar → Edit Tabs…**.
+- **`build-release.sh` says "No valid Apple Development certificate":** redo Step 1,
+  part 3.
+- **`xcodebuild` or `git` not found:** open Xcode once and let it finish installing,
+  then run `sudo xcode-select -s /Applications/Xcode.app` in Terminal.
+- **macOS blocks the app:** go to **System Settings → Privacy & Security** and click
+  **Open Anyway**.
+
+## Uninstall
+
+1. If you set up fan control, run **Copy removal command** from Fan Studio first.
+2. Quit the app (**sparkle icon → Quit**).
+3. Drag **Tisa Dynamic Island** from **Applications** to the Trash.
+
+### For developers
+
+To run from Xcode instead, open **TisaDynamicIsland.xcodeproj**. Under
+**Signing & Capabilities**, pick your own **Team** for **TisaDynamicIsland**,
+**TisaDynamicIslandXPCHelper** and **TisaFanHelper**. Then choose the
+**TisaDynamicIsland** scheme with **My Mac** and press **⌘R**. Debug builds can't
+control fans.
 
 ## Download and install on Windows
 
